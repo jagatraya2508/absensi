@@ -1,0 +1,189 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { pool } = require('../db');
+const { JWT_SECRET, authenticateToken, isAdmin } = require('../middleware/auth');
+
+// Login
+router.post('/login', async (req, res) => {
+    try {
+        const { employee_id, password } = req.body;
+
+        if (!employee_id || !password) {
+            return res.status(400).json({ error: 'Employee ID dan password harus diisi' });
+        }
+
+        const result = await pool.query(
+            'SELECT * FROM users WHERE employee_id = $1',
+            [employee_id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Employee ID atau password salah' });
+        }
+
+        const user = result.rows[0];
+        const validPassword = await bcrypt.compare(password, user.password);
+
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Employee ID atau password salah' });
+        }
+
+        const token = jwt.sign(
+            { id: user.id, employee_id: user.employee_id, name: user.name, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                employee_id: user.employee_id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Register (Admin only)
+router.post('/register', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { employee_id, name, email, password, role } = req.body;
+
+        if (!employee_id || !name || !password) {
+            return res.status(400).json({ error: 'Employee ID, nama, dan password harus diisi' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const result = await pool.query(
+            `INSERT INTO users (employee_id, name, email, password, role) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING id, employee_id, name, email, role`,
+            [employee_id, name, email || null, hashedPassword, role || 'employee']
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Register error:', error);
+        if (error.code === '23505') {
+            return res.status(400).json({ error: 'Employee ID atau email sudah terdaftar' });
+        }
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Get current user info
+router.get('/me', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, employee_id, name, email, role, created_at FROM users WHERE id = $1',
+            [req.user.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User tidak ditemukan' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Get all users (Admin only)
+router.get('/users', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, employee_id, name, email, role, created_at FROM users ORDER BY created_at DESC'
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Delete user (Admin only)
+router.delete('/users/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (parseInt(id) === req.user.id) {
+            return res.status(400).json({ error: 'Tidak dapat menghapus akun sendiri' });
+        }
+
+        await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        res.json({ message: 'User berhasil dihapus' });
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Update user (Admin only)
+router.put('/users/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { employee_id, name, email, password, role } = req.body;
+
+        // Build update query dynamically
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (employee_id) {
+            updates.push(`employee_id = $${paramCount++}`);
+            values.push(employee_id);
+        }
+        if (name) {
+            updates.push(`name = $${paramCount++}`);
+            values.push(name);
+        }
+        if (email !== undefined) {
+            updates.push(`email = $${paramCount++}`);
+            values.push(email || null);
+        }
+        if (password) {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            updates.push(`password = $${paramCount++}`);
+            values.push(hashedPassword);
+        }
+        if (role) {
+            updates.push(`role = $${paramCount++}`);
+            values.push(role);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'Tidak ada data untuk diupdate' });
+        }
+
+        values.push(id);
+        const result = await pool.query(
+            `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, employee_id, name, email, role`,
+            values
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User tidak ditemukan' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Update user error:', error);
+        if (error.code === '23505') {
+            return res.status(400).json({ error: 'Employee ID atau email sudah digunakan' });
+        }
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+module.exports = router;

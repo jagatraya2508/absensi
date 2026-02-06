@@ -1,0 +1,142 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Sidebar from './components/Sidebar';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Attendance from './pages/Attendance';
+import History from './pages/History';
+import AdminLocations from './pages/AdminLocations';
+import AdminUsers from './pages/AdminUsers';
+import AdminReports from './pages/AdminReports';
+
+function ProtectedRoute({ children, adminOnly = false }) {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="loading-overlay">
+                <div className="loading-spinner" />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (adminOnly && user.role !== 'admin') {
+        return <Navigate to="/" replace />;
+    }
+
+    return children;
+}
+
+function AppLayout({ children }) {
+    return (
+        <div className="app-container">
+            <Sidebar />
+            <main className="main-content">
+                {children}
+            </main>
+        </div>
+    );
+}
+
+function AppRoutes() {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="loading-overlay">
+                <div className="loading-spinner" />
+            </div>
+        );
+    }
+
+    return (
+        <Routes>
+            <Route
+                path="/login"
+                element={user ? <Navigate to="/" replace /> : <Login />}
+            />
+
+            <Route
+                path="/"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <Dashboard />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/attendance"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <Attendance />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/history"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <History />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/locations"
+                element={
+                    <ProtectedRoute adminOnly>
+                        <AppLayout>
+                            <AdminLocations />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/users"
+                element={
+                    <ProtectedRoute adminOnly>
+                        <AppLayout>
+                            <AdminUsers />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/reports"
+                element={
+                    <ProtectedRoute adminOnly>
+                        <AppLayout>
+                            <AdminReports />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    );
+}
+
+export default function App() {
+    return (
+        <BrowserRouter>
+            <AuthProvider>
+                <AppRoutes />
+            </AuthProvider>
+        </BrowserRouter>
+    );
+}

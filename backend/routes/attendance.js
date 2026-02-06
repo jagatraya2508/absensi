@@ -1,0 +1,320 @@
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { pool } = require('../db');
+const { authenticateToken } = require('../middleware/auth');
+const { calculateDistance } = require('../utils/distance');
+
+// Configure multer for photo uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads/attendance');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${req.user.id}${path.extname(file.originalname)}`;
+        cb(null, uniqueName);
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (extname && mimetype) {
+            cb(null, true);
+        } else {
+            cb(new Error('Hanya file gambar yang diizinkan'));
+        }
+    }
+});
+
+// Check-in
+router.post('/check-in', authenticateToken, upload.single('photo'), async (req, res) => {
+    try {
+        const { latitude, longitude, location_id, notes } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'Foto selfie harus diupload' });
+        }
+
+        if (!latitude || !longitude) {
+            return res.status(400).json({ error: 'Koordinat lokasi harus diisi' });
+        }
+
+        // Check if already checked in today
+        const today = new Date().toISOString().split('T')[0];
+        const existingCheckin = await pool.query(
+            `SELECT * FROM attendance_records 
+       WHERE user_id = $1 AND type = 'check_in' 
+       AND DATE(recorded_at) = $2`,
+            [req.user.id, today]
+        );
+
+        if (existingCheckin.rows.length > 0) {
+            return res.status(400).json({ error: 'Anda sudah melakukan check-in hari ini' });
+        }
+
+        // Calculate distance from nearest location
+        let nearestLocation = null;
+        let distance = null;
+        let isValid = true;
+
+        if (location_id) {
+            const locationResult = await pool.query(
+                'SELECT * FROM attendance_locations WHERE id = $1 AND is_active = true',
+                [location_id]
+            );
+            if (locationResult.rows.length > 0) {
+                nearestLocation = locationResult.rows[0];
+                distance = calculateDistance(
+                    parseFloat(latitude),
+                    parseFloat(longitude),
+                    parseFloat(nearestLocation.latitude),
+                    parseFloat(nearestLocation.longitude)
+                );
+                isValid = distance <= nearestLocation.radius_meters;
+            }
+        } else {
+            // Find nearest active location
+            const locationsResult = await pool.query(
+                'SELECT * FROM attendance_locations WHERE is_active = true'
+            );
+
+            let minDistance = Infinity;
+            for (const loc of locationsResult.rows) {
+                const d = calculateDistance(
+                    parseFloat(latitude),
+                    parseFloat(longitude),
+                    parseFloat(loc.latitude),
+                    parseFloat(loc.longitude)
+                );
+                if (d < minDistance) {
+                    minDistance = d;
+                    nearestLocation = loc;
+                    distance = d;
+                }
+            }
+            if (nearestLocation) {
+                isValid = distance <= nearestLocation.radius_meters;
+            }
+        }
+
+        const photoPath = `/uploads/attendance/${req.file.filename}`;
+
+        const result = await pool.query(
+            `INSERT INTO attendance_records 
+       (user_id, location_id, type, photo_path, latitude, longitude, distance_meters, is_valid, notes)
+       VALUES ($1, $2, 'check_in', $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+            [
+                req.user.id,
+                nearestLocation?.id || null,
+                photoPath,
+                latitude,
+                longitude,
+                distance,
+                isValid,
+                notes || null
+            ]
+        );
+
+        res.status(201).json({
+            ...result.rows[0],
+            location_name: nearestLocation?.name || null,
+            message: isValid
+                ? 'Check-in berhasil'
+                : `Check-in berhasil, tetapi Anda berada ${Math.round(distance)}m dari lokasi kantor`
+        });
+    } catch (error) {
+        console.error('Check-in error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Check-out
+router.post('/check-out', authenticateToken, upload.single('photo'), async (req, res) => {
+    try {
+        const { latitude, longitude, location_id, notes } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'Foto selfie harus diupload' });
+        }
+
+        if (!latitude || !longitude) {
+            return res.status(400).json({ error: 'Koordinat lokasi harus diisi' });
+        }
+
+        // Check if checked in today
+        const today = new Date().toISOString().split('T')[0];
+        const existingCheckin = await pool.query(
+            `SELECT * FROM attendance_records 
+       WHERE user_id = $1 AND type = 'check_in' 
+       AND DATE(recorded_at) = $2`,
+            [req.user.id, today]
+        );
+
+        if (existingCheckin.rows.length === 0) {
+            return res.status(400).json({ error: 'Anda belum melakukan check-in hari ini' });
+        }
+
+        // Check if already checked out today
+        const existingCheckout = await pool.query(
+            `SELECT * FROM attendance_records 
+       WHERE user_id = $1 AND type = 'check_out' 
+       AND DATE(recorded_at) = $2`,
+            [req.user.id, today]
+        );
+
+        if (existingCheckout.rows.length > 0) {
+            return res.status(400).json({ error: 'Anda sudah melakukan check-out hari ini' });
+        }
+
+        // Calculate distance from nearest location
+        let nearestLocation = null;
+        let distance = null;
+        let isValid = true;
+
+        if (location_id) {
+            const locationResult = await pool.query(
+                'SELECT * FROM attendance_locations WHERE id = $1 AND is_active = true',
+                [location_id]
+            );
+            if (locationResult.rows.length > 0) {
+                nearestLocation = locationResult.rows[0];
+                distance = calculateDistance(
+                    parseFloat(latitude),
+                    parseFloat(longitude),
+                    parseFloat(nearestLocation.latitude),
+                    parseFloat(nearestLocation.longitude)
+                );
+                isValid = distance <= nearestLocation.radius_meters;
+            }
+        } else {
+            const locationsResult = await pool.query(
+                'SELECT * FROM attendance_locations WHERE is_active = true'
+            );
+
+            let minDistance = Infinity;
+            for (const loc of locationsResult.rows) {
+                const d = calculateDistance(
+                    parseFloat(latitude),
+                    parseFloat(longitude),
+                    parseFloat(loc.latitude),
+                    parseFloat(loc.longitude)
+                );
+                if (d < minDistance) {
+                    minDistance = d;
+                    nearestLocation = loc;
+                    distance = d;
+                }
+            }
+            if (nearestLocation) {
+                isValid = distance <= nearestLocation.radius_meters;
+            }
+        }
+
+        const photoPath = `/uploads/attendance/${req.file.filename}`;
+
+        const result = await pool.query(
+            `INSERT INTO attendance_records 
+       (user_id, location_id, type, photo_path, latitude, longitude, distance_meters, is_valid, notes)
+       VALUES ($1, $2, 'check_out', $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+            [
+                req.user.id,
+                nearestLocation?.id || null,
+                photoPath,
+                latitude,
+                longitude,
+                distance,
+                isValid,
+                notes || null
+            ]
+        );
+
+        res.status(201).json({
+            ...result.rows[0],
+            location_name: nearestLocation?.name || null,
+            message: isValid
+                ? 'Check-out berhasil'
+                : `Check-out berhasil, tetapi Anda berada ${Math.round(distance)}m dari lokasi kantor`
+        });
+    } catch (error) {
+        console.error('Check-out error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Get today's attendance status
+router.get('/today', authenticateToken, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+
+        const result = await pool.query(
+            `SELECT ar.*, al.name as location_name 
+       FROM attendance_records ar
+       LEFT JOIN attendance_locations al ON ar.location_id = al.id
+       WHERE ar.user_id = $1 AND DATE(ar.recorded_at) = $2
+       ORDER BY ar.recorded_at`,
+            [req.user.id, today]
+        );
+
+        const checkIn = result.rows.find(r => r.type === 'check_in');
+        const checkOut = result.rows.find(r => r.type === 'check_out');
+
+        res.json({
+            checked_in: !!checkIn,
+            checked_out: !!checkOut,
+            check_in: checkIn || null,
+            check_out: checkOut || null
+        });
+    } catch (error) {
+        console.error('Get today attendance error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Get attendance history
+router.get('/history', authenticateToken, async (req, res) => {
+    try {
+        const { start_date, end_date, limit = 30 } = req.query;
+
+        let query = `
+      SELECT ar.*, al.name as location_name 
+      FROM attendance_records ar
+      LEFT JOIN attendance_locations al ON ar.location_id = al.id
+      WHERE ar.user_id = $1
+    `;
+        const params = [req.user.id];
+
+        if (start_date) {
+            params.push(start_date);
+            query += ` AND DATE(ar.recorded_at) >= $${params.length}`;
+        }
+
+        if (end_date) {
+            params.push(end_date);
+            query += ` AND DATE(ar.recorded_at) <= $${params.length}`;
+        }
+
+        query += ` ORDER BY ar.recorded_at DESC LIMIT $${params.length + 1}`;
+        params.push(parseInt(limit));
+
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Get attendance history error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+module.exports = router;
