@@ -1,24 +1,43 @@
 import { useState, useEffect } from 'react';
-import { attendanceAPI } from '../utils/api';
+import { attendanceAPI, authAPI } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function History() {
+    const { user } = useAuth();
     const [records, setRecords] = useState([]);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [selectedUser, setSelectedUser] = useState('all');
+
+    const isAdmin = user?.role === 'admin';
 
     useEffect(() => {
+        if (isAdmin) {
+            fetchUsers();
+        }
         fetchHistory();
     }, []);
+
+    async function fetchUsers() {
+        try {
+            const data = await authAPI.getUsers();
+            setUsers(data || []);
+        } catch (err) {
+            console.error('Failed to fetch users:', err);
+        }
+    }
 
     async function fetchHistory() {
         setLoading(true);
         setError('');
         try {
-            const params = {};
+            const params = { limit: 100 };
             if (startDate) params.start_date = startDate;
             if (endDate) params.end_date = endDate;
+            if (isAdmin && selectedUser) params.user_id = selectedUser;
 
             const data = await attendanceAPI.getHistory(params);
             setRecords(data || []);
@@ -66,12 +85,31 @@ export default function History() {
         <div>
             <div className="page-header">
                 <h1 className="page-title">📋 Riwayat Absensi</h1>
-                <p className="page-subtitle">Lihat riwayat absensi Anda</p>
+                <p className="page-subtitle">
+                    {isAdmin ? 'Lihat riwayat absensi semua karyawan' : 'Lihat riwayat absensi Anda'}
+                </p>
             </div>
 
             {/* Filter */}
             <div className="card mb-4">
                 <form onSubmit={handleFilter} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    {isAdmin && (
+                        <div className="form-group" style={{ marginBottom: 0, minWidth: '200px' }}>
+                            <label className="form-label">Karyawan</label>
+                            <select
+                                className="form-input form-select"
+                                value={selectedUser}
+                                onChange={(e) => setSelectedUser(e.target.value)}
+                            >
+                                <option value="all">Semua Karyawan</option>
+                                {users.map((u) => (
+                                    <option key={u.id} value={u.id}>
+                                        {u.name} ({u.employee_id})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label">Tanggal Mulai</label>
                         <input
@@ -99,6 +137,7 @@ export default function History() {
                         onClick={() => {
                             setStartDate('');
                             setEndDate('');
+                            setSelectedUser('all');
                             setTimeout(fetchHistory, 0);
                         }}
                     >
@@ -153,6 +192,14 @@ export default function History() {
                                         className="photo-thumb-lg"
                                     />
                                     <div style={{ flex: 1 }}>
+                                        {isAdmin && record.user_name && (
+                                            <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                                                {record.user_name}
+                                                <span style={{ color: 'var(--gray-400)', fontWeight: 400, marginLeft: '0.5rem' }}>
+                                                    ({record.employee_id})
+                                                </span>
+                                            </div>
+                                        )}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                                             <span className={`badge ${record.type === 'check_in' ? 'badge-primary' : 'badge-warning'}`}>
                                                 {record.type === 'check_in' ? '📥 Masuk' : '📤 Pulang'}
@@ -175,6 +222,22 @@ export default function History() {
                                         <div style={{ fontSize: '0.7rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
                                             {record.latitude ? parseFloat(record.latitude).toFixed(4) : '-'}, {record.longitude ? parseFloat(record.longitude).toFixed(4) : '-'}
                                         </div>
+                                        {isAdmin && (
+                                            <button
+                                                className="btn btn-danger"
+                                                style={{
+                                                    padding: '0.25rem 0.5rem',
+                                                    fontSize: '0.75rem',
+                                                    marginTop: '0.5rem',
+                                                    width: 'auto',
+                                                    marginLeft: 'auto',
+                                                    display: 'block'
+                                                }}
+                                                onClick={() => handleDelete(record.id)}
+                                            >
+                                                🗑️
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -184,4 +247,18 @@ export default function History() {
             )}
         </div>
     );
+
+    async function handleDelete(id) {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus data absensi ini? Foto dan data tidak bisa dikembalikan.')) {
+            return;
+        }
+
+        try {
+            await attendanceAPI.delete(id);
+            setRecords(prev => prev.filter(r => r.id !== id));
+        } catch (err) {
+            console.error('Failed to delete attendance:', err);
+            alert(err.message || 'Gagal menghapus data absensi');
+        }
+    }
 }

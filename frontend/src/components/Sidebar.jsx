@@ -118,6 +118,14 @@ export default function Sidebar() {
                         Admin
                     </NavLink>
                 )}
+                <button
+                    className="mobile-nav-link"
+                    onClick={handleLogout}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontFamily: 'inherit' }}
+                >
+                    <span className="mobile-nav-link-icon" style={{ color: 'var(--danger-500)' }}>🚪</span>
+                    Logout
+                </button>
             </nav>
         </>
     );

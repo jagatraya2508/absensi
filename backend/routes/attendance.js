@@ -286,24 +286,41 @@ router.get('/today', authenticateToken, async (req, res) => {
 // Get attendance history
 router.get('/history', authenticateToken, async (req, res) => {
     try {
-        const { start_date, end_date, limit = 30 } = req.query;
+        const { start_date, end_date, limit = 50, user_id } = req.query;
+        const isAdmin = req.user.role === 'admin';
 
         let query = `
-      SELECT ar.*, al.name as location_name 
+      SELECT ar.*, al.name as location_name, u.name as user_name, u.employee_id
       FROM attendance_records ar
       LEFT JOIN attendance_locations al ON ar.location_id = al.id
-      WHERE ar.user_id = $1
+      LEFT JOIN users u ON ar.user_id = u.id
     `;
-        const params = [req.user.id];
+        const params = [];
+        const conditions = [];
+
+        // If admin and user_id provided, filter by that user
+        // If admin and no user_id, show all users
+        // If not admin, only show own records
+        if (!isAdmin) {
+            params.push(req.user.id);
+            conditions.push(`ar.user_id = $${params.length}`);
+        } else if (user_id && user_id !== 'all') {
+            params.push(user_id);
+            conditions.push(`ar.user_id = $${params.length}`);
+        }
 
         if (start_date) {
             params.push(start_date);
-            query += ` AND DATE(ar.recorded_at) >= $${params.length}`;
+            conditions.push(`DATE(ar.recorded_at) >= $${params.length}`);
         }
 
         if (end_date) {
             params.push(end_date);
-            query += ` AND DATE(ar.recorded_at) <= $${params.length}`;
+            conditions.push(`DATE(ar.recorded_at) <= $${params.length}`);
+        }
+
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
         }
 
         query += ` ORDER BY ar.recorded_at DESC LIMIT $${params.length + 1}`;
@@ -313,6 +330,42 @@ router.get('/history', authenticateToken, async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         console.error('Get attendance history error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Delete attendance record (admin only)
+router.delete('/:id', authenticateToken, async (req, res) => {
+    try {
+        // Check if admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Akses ditolak. Hanya admin yang bisa menghapus data.' });
+        }
+
+        const { id } = req.params;
+
+        // Check if record exists
+        const checkRecord = await pool.query('SELECT * FROM attendance_records WHERE id = $1', [id]);
+
+        if (checkRecord.rows.length === 0) {
+            return res.status(404).json({ error: 'Data absensi tidak ditemukan' });
+        }
+
+        // Delete photo if exists
+        const record = checkRecord.rows[0];
+        if (record.photo_path) {
+            const photoFullPath = path.join(__dirname, '..', record.photo_path);
+            if (fs.existsSync(photoFullPath)) {
+                fs.unlinkSync(photoFullPath);
+            }
+        }
+
+        // Delete record from database
+        await pool.query('DELETE FROM attendance_records WHERE id = $1', [id]);
+
+        res.json({ message: 'Data absensi berhasil dihapus' });
+    } catch (error) {
+        console.error('Delete attendance error:', error);
         res.status(500).json({ error: 'Terjadi kesalahan server' });
     }
 });

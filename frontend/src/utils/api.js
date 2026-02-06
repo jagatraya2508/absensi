@@ -84,6 +84,8 @@ export const attendanceAPI = {
         const query = new URLSearchParams(params).toString();
         return request(`/attendance/history?${query}`);
     },
+
+    delete: (id) => request(`/attendance/${id}`, { method: 'DELETE' }),
 };
 
 // Locations API

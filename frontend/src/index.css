@@ -20,11 +20,11 @@
   --success-50: #ecfdf5;
   --success-500: #10b981;
   --success-600: #059669;
-  
+
   --warning-50: #fffbeb;
   --warning-500: #f59e0b;
   --warning-600: #d97706;
-  
+
   --danger-50: #fef2f2;
   --danger-500: #ef4444;
   --danger-600: #dc2626;
@@ -72,7 +72,9 @@
 }
 
 /* Reset & Base */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -274,7 +276,7 @@ body {
   .sidebar {
     display: none;
   }
-  
+
   .mobile-nav {
     display: flex;
     justify-content: space-around;
@@ -934,17 +936,23 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { 
-    opacity: 0; 
+  from {
+    opacity: 0;
     transform: translateY(20px);
   }
-  to { 
-    opacity: 1; 
+
+  to {
+    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -974,12 +982,14 @@ body {
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 640px) {
+
   .grid-4,
   .grid-3,
   .grid-2 {
@@ -991,33 +1001,97 @@ body {
    UTILITIES
 ======================================== */
 
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.text-success { color: var(--success-500); }
-.text-warning { color: var(--warning-500); }
-.text-danger { color: var(--danger-500); }
-.text-muted { color: var(--gray-400); }
+.text-center {
+  text-align: center;
+}
 
-.mb-1 { margin-bottom: 0.5rem; }
-.mb-2 { margin-bottom: 1rem; }
-.mb-3 { margin-bottom: 1.5rem; }
-.mb-4 { margin-bottom: 2rem; }
+.text-right {
+  text-align: right;
+}
 
-.mt-1 { margin-top: 0.5rem; }
-.mt-2 { margin-top: 1rem; }
-.mt-3 { margin-top: 1.5rem; }
-.mt-4 { margin-top: 2rem; }
+.text-success {
+  color: var(--success-500);
+}
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
-.gap-1 { gap: 0.5rem; }
-.gap-2 { gap: 1rem; }
-.gap-3 { gap: 1.5rem; }
+.text-warning {
+  color: var(--warning-500);
+}
 
-.hidden { display: none; }
+.text-danger {
+  color: var(--danger-500);
+}
+
+.text-muted {
+  color: var(--gray-400);
+}
+
+.mb-1 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-2 {
+  margin-bottom: 1rem;
+}
+
+.mb-3 {
+  margin-bottom: 1.5rem;
+}
+
+.mb-4 {
+  margin-bottom: 2rem;
+}
+
+.mt-1 {
+  margin-top: 0.5rem;
+}
+
+.mt-2 {
+  margin-top: 1rem;
+}
+
+.mt-3 {
+  margin-top: 1.5rem;
+}
+
+.mt-4 {
+  margin-top: 2rem;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-1 {
+  gap: 0.5rem;
+}
+
+.gap-2 {
+  gap: 1rem;
+}
+
+.gap-3 {
+  gap: 1.5rem;
+}
+
+.hidden {
+  display: none;
+}
 
 /* Page Header */
 .page-header {
@@ -1065,4 +1139,361 @@ body {
   width: 80px;
   height: 80px;
   border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+/* ========================================
+   MOBILE RESPONSIVE ENHANCEMENTS
+======================================== */
+
+/* Mobile-first improvements */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.875rem;
+  }
+
+  .card {
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-header .btn {
+    width: 100%;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  /* Form improvements for mobile */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-input {
+    padding: 0.75rem;
+    font-size: 16px;
+    /* Prevents iOS zoom on focus */
+  }
+
+  .form-select {
+    font-size: 16px;
+  }
+
+  /* Button improvements */
+  .btn {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.9rem;
+    width: 100%;
+  }
+
+  .btn-lg {
+    padding: 1rem 1.5rem;
+  }
+
+  /* Table responsive */
+  .table-container {
+    margin: 0 -1rem;
+    border-radius: 0;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  /* Status cards */
+  .status-card {
+    padding: 1rem;
+  }
+
+  .status-card-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+
+  .status-card-content p {
+    font-size: 1.25rem;
+  }
+
+  /* Modal full screen on mobile */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 85vh;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  /* Camera on mobile */
+  .camera-container {
+    max-width: 100%;
+  }
+
+  .camera-overlay {
+    width: 140px;
+    height: 180px;
+  }
+
+  .camera-btn {
+    width: 56px;
+    height: 56px;
+  }
+
+  .camera-btn-inner {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Photo thumbnails */
+  .photo-thumb-lg {
+    width: 60px;
+    height: 60px;
+  }
+
+  /* Attendance button */
+  .attendance-btn {
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+
+  .attendance-btn-icon {
+    font-size: 2.5rem;
+  }
+
+  /* Location info */
+  .location-info {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .location-distance {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Badge */
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  /* Login page */
+  .login-page {
+    padding: 1rem;
+  }
+
+  .login-card {
+    padding: 1.5rem;
+  }
+
+  .login-logo-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+  }
+
+  .login-logo h1 {
+    font-size: 1.25rem;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .empty-state-icon {
+    font-size: 2.5rem;
+  }
+
+  /* Alert */
+  .alert {
+    padding: 0.875rem;
+    font-size: 0.875rem;
+  }
+
+  /* History cards on mobile */
+  .card.mb-3>div {
+    gap: 0.75rem !important;
+  }
+
+  .card.mb-3>div>div {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* Extra small screen (below 480px) */
+@media (max-width: 480px) {
+  html {
+    font-size: 13px;
+  }
+
+  .main-content {
+    padding: 0.75rem;
+    padding-bottom: 5rem;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+  }
+
+  .card {
+    padding: 0.875rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .status-card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .status-card-content h3 {
+    font-size: 0.75rem;
+  }
+
+  .status-card-content p {
+    font-size: 1.1rem;
+  }
+
+  .photo-thumb-lg {
+    width: 50px;
+    height: 50px;
+  }
+
+  /* Mobile nav */
+  .mobile-nav {
+    padding: 0.5rem;
+  }
+
+  .mobile-nav-link {
+    font-size: 0.6rem;
+    padding: 0.375rem;
+  }
+
+  .mobile-nav-link-icon {
+    font-size: 1.1rem;
+  }
+}
+
+/* Prevent horizontal scroll */
+html,
+body {
+  overflow-x: hidden;
+}
+
+/* Touch-friendly improvements */
+@media (pointer: coarse) {
+
+  .btn,
+  .sidebar-link,
+  .mobile-nav-link {
+    min-height: 44px;
+  }
+
+  .form-input,
+  .form-select {
+    min-height: 48px;
+  }
+
+  /* Larger touch targets */
+  .table tbody tr {
+    min-height: 48px;
+  }
+
+  .sidebar-logout {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Safe area for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .mobile-nav {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .main-content {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  .camera-container {
+    max-width: 60%;
+  }
+
+  .modal {
+    max-height: 95vh;
+  }
+
+  .login-logo-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.5rem;
+  }
+
+  .login-logo {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Filter form mobile layout */
+@media (max-width: 768px) {
+  .card form[style*="flex"] {
+    flex-direction: column !important;
+  }
+
+  .card form[style*="flex"] .form-group {
+    width: 100%;
+  }
+
+  .card form[style*="flex"] .btn {
+    width: 100%;
+  }
 }
