@@ -41,6 +41,36 @@ const leaveTypes = {
     leave: 'Cuti'
 };
 
+// Annual leave quota (days per year)
+const ANNUAL_LEAVE_QUOTA = 12;
+
+// Helper function to calculate days between two dates
+function calculateDays(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
+
+// Helper function to get used leave days for a user in current year
+async function getUsedLeaveDays(userId, year) {
+    const result = await pool.query(
+        `SELECT start_date, end_date 
+         FROM leave_requests 
+         WHERE user_id = $1 
+           AND type = 'leave' 
+           AND status IN ('approved', 'pending')
+           AND EXTRACT(YEAR FROM start_date) = $2`,
+        [userId, year]
+    );
+
+    let totalDays = 0;
+    for (const row of result.rows) {
+        totalDays += calculateDays(row.start_date, row.end_date);
+    }
+    return totalDays;
+}
+
 // Create new leave request (Employee)
 router.post('/', authenticateToken, upload.single('attachment'), async (req, res) => {
     try {
@@ -64,6 +94,22 @@ router.post('/', authenticateToken, upload.single('attachment'), async (req, res
         // Validate reason
         if (!reason || reason.trim().length < 10) {
             return res.status(400).json({ error: 'Alasan harus diisi minimal 10 karakter' });
+        }
+
+        // Check annual leave quota for 'leave' type
+        if (type === 'leave') {
+            const requestedDays = calculateDays(start_date, end_date);
+            const year = new Date(start_date).getFullYear();
+            const usedDays = await getUsedLeaveDays(userId, year);
+            const remainingDays = ANNUAL_LEAVE_QUOTA - usedDays;
+
+            if (requestedDays > remainingDays) {
+                return res.status(400).json({
+                    error: `Sisa cuti Anda tahun ${year} adalah ${remainingDays} hari. Anda mengajukan ${requestedDays} hari.`,
+                    remaining_days: remainingDays,
+                    requested_days: requestedDays
+                });
+            }
         }
 
         const attachmentPath = req.file ? `/uploads/leave/${req.file.filename}` : null;
@@ -110,6 +156,25 @@ router.get('/my', authenticateToken, async (req, res) => {
         res.json(result.rows);
     } catch (error) {
         console.error('Get my leave requests error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Get my leave quota info (Employee)
+router.get('/my-quota', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const year = new Date().getFullYear();
+        const usedDays = await getUsedLeaveDays(userId, year);
+
+        res.json({
+            year,
+            quota: ANNUAL_LEAVE_QUOTA,
+            used: usedDays,
+            remaining: ANNUAL_LEAVE_QUOTA - usedDays
+        });
+    } catch (error) {
+        console.error('Get quota error:', error);
         res.status(500).json({ error: 'Terjadi kesalahan server' });
     }
 });

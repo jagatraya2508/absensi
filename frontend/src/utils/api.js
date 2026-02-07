@@ -219,6 +219,9 @@ export const leavesAPI = {
         body: JSON.stringify({ status, admin_notes: adminNotes }),
     }),
 
+    // Get my leave quota info
+    getQuota: () => request('/leaves/my-quota'),
+
     // Delete leave request
     delete: (id) => request(`/leaves/${id}`, { method: 'DELETE' }),
 };

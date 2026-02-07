@@ -67,8 +67,3 @@ CREATE INDEX IF NOT EXISTS idx_leave_date ON leave_requests(start_date);
 INSERT INTO users (employee_id, name, email, password, role) 
 VALUES ('ADMIN001', 'Administrator', 'admin@company.com', '$2b$10$rQZ5QH2V5Y1vX8W6x9Y8/.O7kJ6H5F4G3D2C1B0A9N8M7L6K5J4I3', 'admin')
 ON CONFLICT (employee_id) DO NOTHING;
-
--- Insert sample location
-INSERT INTO attendance_locations (name, latitude, longitude, radius_meters) 
-VALUES ('Kantor Pusat', -6.2088, 106.8456, 100)
-ON CONFLICT DO NOTHING;

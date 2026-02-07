@@ -7,6 +7,7 @@ export default function Leaves() {
     const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [filter, setFilter] = useState('');
+    const [quota, setQuota] = useState(null);
 
     // Form state
     const [type, setType] = useState('late');
@@ -29,7 +30,17 @@ export default function Leaves() {
 
     useEffect(() => {
         fetchRequests();
+        fetchQuota();
     }, [filter]);
+
+    async function fetchQuota() {
+        try {
+            const data = await leavesAPI.getQuota();
+            setQuota(data);
+        } catch (error) {
+            console.error('Failed to fetch quota:', error);
+        }
+    }
 
     async function fetchRequests() {
         setLoading(true);
@@ -142,11 +153,18 @@ export default function Leaves() {
                     className="card status-card"
                     onClick={() => { setType('leave'); setShowForm(true); }}
                     style={{ cursor: 'pointer', border: 'none', textAlign: 'left' }}
+                    disabled={quota && quota.remaining <= 0}
                 >
                     <div className="status-card-icon primary">🏖️</div>
                     <div className="status-card-content">
                         <h3>Cuti</h3>
-                        <p style={{ fontSize: '0.85rem' }}>Ambil cuti tahunan</p>
+                        <p style={{ fontSize: '0.85rem' }}>
+                            {quota ? (
+                                <>Sisa: <strong>{quota.remaining}</strong> dari {quota.quota} hari</>
+                            ) : (
+                                'Ambil cuti tahunan'
+                            )}
+                        </p>
                     </div>
                 </button>
             </div>
