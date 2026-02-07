@@ -63,6 +63,20 @@ export const authAPI = {
             method: 'PUT',
             body: JSON.stringify(userData),
         }),
+
+    // Change own password
+    changePassword: (currentPassword, newPassword) =>
+        request('/auth/change-password', {
+            method: 'PUT',
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+        }),
+
+    // Reset user password (admin only)
+    resetPassword: (userId, newPassword) =>
+        request(`/auth/reset-password/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ new_password: newPassword }),
+        }),
 };
 
 // Attendance API

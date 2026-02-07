@@ -99,6 +99,24 @@ export default function AdminUsers() {
         }
     }
 
+    async function handleResetPassword(user) {
+        const newPassword = prompt(`Reset password untuk ${user.name}?\nMasukkan password baru (minimal 6 karakter):`);
+
+        if (!newPassword) return;
+
+        if (newPassword.length < 6) {
+            alert('Password minimal 6 karakter');
+            return;
+        }
+
+        try {
+            const result = await authAPI.resetPassword(user.id, newPassword);
+            setSuccess(result.message || 'Password berhasil direset');
+        } catch (error) {
+            alert(error.message || 'Gagal mereset password');
+        }
+    }
+
     return (
         <div>
             <div className="page-header">
@@ -163,6 +181,13 @@ export default function AdminUsers() {
                                                     onClick={() => openEditModal(user)}
                                                 >
                                                     ✏️ Edit
+                                                </button>
+                                                <button
+                                                    className="btn btn-outline"
+                                                    style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
+                                                    onClick={() => handleResetPassword(user)}
+                                                >
+                                                    🔑 Reset Password
                                                 </button>
                                                 <button
                                                     className="btn btn-outline"

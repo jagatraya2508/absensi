@@ -11,6 +11,7 @@ import AdminReports from './pages/AdminReports';
 import AdminFaceRegistration from './pages/AdminFaceRegistration';
 import Leaves from './pages/Leaves';
 import AdminLeaves from './pages/AdminLeaves';
+import ChangePassword from './pages/ChangePassword';
 
 function ProtectedRoute({ children, adminOnly = false }) {
     const { user, loading } = useAuth();
@@ -91,6 +92,17 @@ function AppRoutes() {
                     <ProtectedRoute>
                         <AppLayout>
                             <History />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/change-password"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <ChangePassword />
                         </AppLayout>
                     </ProtectedRoute>
                 }

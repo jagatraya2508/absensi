@@ -15,6 +15,7 @@ export default function Sidebar() {
         { path: '/attendance', icon: '📸', label: 'Absensi' },
         { path: '/history', icon: '📋', label: 'Riwayat' },
         { path: '/leaves', icon: '📝', label: 'Izin & Cuti' },
+        { path: '/change-password', icon: '🔑', label: 'Ubah Password' },
     ];
 
     const adminItems = [
