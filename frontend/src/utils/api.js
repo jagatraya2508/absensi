@@ -133,6 +133,59 @@ export const reportsAPI = {
         if (endDate) params.set('end_date', endDate);
         return request(`/reports/employee/${id}?${params}`);
     },
+
+    // Export functions - return download URLs
+    exportDailyPDF: (date) => {
+        const token = localStorage.getItem('token');
+        const url = `${API_BASE}/reports/export/daily/pdf?date=${date}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `laporan-absensi-${date}.pdf`;
+                link.click();
+            });
+    },
+
+    exportDailyExcel: (date) => {
+        const token = localStorage.getItem('token');
+        const url = `${API_BASE}/reports/export/daily/excel?date=${date}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `laporan-absensi-${date}.xlsx`;
+                link.click();
+            });
+    },
+
+    exportMonthlyPDF: (year, month) => {
+        const token = localStorage.getItem('token');
+        const url = `${API_BASE}/reports/export/monthly/pdf?year=${year}&month=${month}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `laporan-bulanan-${year}-${month}.pdf`;
+                link.click();
+            });
+    },
+
+    exportMonthlyExcel: (year, month) => {
+        const token = localStorage.getItem('token');
+        const url = `${API_BASE}/reports/export/monthly/excel?year=${year}&month=${month}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `laporan-bulanan-${year}-${month}.xlsx`;
+                link.click();
+            });
+    },
 };
 
 export default { authAPI, attendanceAPI, locationsAPI, reportsAPI };

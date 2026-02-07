@@ -8,6 +8,7 @@ export default function AdminReports() {
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         fetchReport();
@@ -27,6 +28,38 @@ export default function AdminReports() {
             console.error('Failed to fetch report:', error);
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleExportPDF() {
+        setExporting(true);
+        try {
+            if (reportType === 'daily') {
+                await reportsAPI.exportDailyPDF(date);
+            } else {
+                await reportsAPI.exportMonthlyPDF(year, month);
+            }
+        } catch (error) {
+            console.error('Export PDF failed:', error);
+            alert('Gagal mengunduh PDF');
+        } finally {
+            setExporting(false);
+        }
+    }
+
+    async function handleExportExcel() {
+        setExporting(true);
+        try {
+            if (reportType === 'daily') {
+                await reportsAPI.exportDailyExcel(date);
+            } else {
+                await reportsAPI.exportMonthlyExcel(year, month);
+            }
+        } catch (error) {
+            console.error('Export Excel failed:', error);
+            alert('Gagal mengunduh Excel');
+        } finally {
+            setExporting(false);
         }
     }
 
@@ -144,13 +177,31 @@ export default function AdminReports() {
 
             {/* Report Table */}
             <div className="card">
-                <div className="card-header">
+                <div className="card-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <h2 className="card-title">
                         {reportType === 'daily'
                             ? `Laporan ${new Date(date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
                             : `Laporan ${months[month - 1]} ${year}`
                         }
                     </h2>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                            className="btn btn-outline"
+                            onClick={handleExportPDF}
+                            disabled={exporting || !report || report.records?.length === 0}
+                            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                        >
+                            {exporting ? '⏳' : '📄'} PDF
+                        </button>
+                        <button
+                            className="btn btn-success"
+                            onClick={handleExportExcel}
+                            disabled={exporting || !report || report.records?.length === 0}
+                            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                        >
+                            {exporting ? '⏳' : '📊'} Excel
+                        </button>
+                    </div>
                 </div>
 
                 {loading ? (
