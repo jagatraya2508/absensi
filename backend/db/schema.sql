@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(100) UNIQUE,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'employee',
+    face_descriptor TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

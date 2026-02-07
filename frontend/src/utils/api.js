@@ -226,4 +226,31 @@ export const leavesAPI = {
     delete: (id) => request(`/leaves/${id}`, { method: 'DELETE' }),
 };
 
-export default { authAPI, attendanceAPI, locationsAPI, reportsAPI, leavesAPI };
+// Face API
+export const faceAPI = {
+    // Register face for user (admin)
+    register: (userId, faceDescriptor) => request(`/face/register/${userId}`, {
+        method: 'POST',
+        body: JSON.stringify({ face_descriptor: faceDescriptor }),
+    }),
+
+    // Self register face (employee)
+    registerSelf: (faceDescriptor) => request('/face/register-self', {
+        method: 'POST',
+        body: JSON.stringify({ face_descriptor: faceDescriptor }),
+    }),
+
+    // Check if current user has face registered
+    getStatus: () => request('/face/status'),
+
+    // Get face descriptor for current user
+    getMyDescriptor: () => request('/face/my-descriptor'),
+
+    // Get all users with face status (admin)
+    getUsersStatus: () => request('/face/users-status'),
+
+    // Delete face registration (admin)
+    delete: (userId) => request(`/face/${userId}`, { method: 'DELETE' }),
+};
+
+export default { authAPI, attendanceAPI, locationsAPI, reportsAPI, leavesAPI, faceAPI };

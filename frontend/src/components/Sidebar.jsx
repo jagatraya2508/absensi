@@ -20,6 +20,7 @@ export default function Sidebar() {
     const adminItems = [
         { path: '/admin/locations', icon: '📍', label: 'Kelola Lokasi' },
         { path: '/admin/users', icon: '👥', label: 'Kelola User' },
+        { path: '/admin/face-registration', icon: '🔐', label: 'Registrasi Wajah' },
         { path: '/admin/leaves', icon: '📝', label: 'Kelola Izin' },
         { path: '/admin/reports', icon: '📊', label: 'Laporan' },
     ];

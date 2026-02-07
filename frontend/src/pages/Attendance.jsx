@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Camera from '../components/Camera';
 import LocationTracker from '../components/LocationTracker';
-import { attendanceAPI, locationsAPI } from '../utils/api';
+import { attendanceAPI, locationsAPI, faceAPI } from '../utils/api';
+import useFaceApi from '../hooks/useFaceApi';
 
 export default function Attendance() {
     const [searchParams] = useSearchParams();
@@ -11,7 +12,7 @@ export default function Attendance() {
     const type = searchParams.get('type') || 'check-in';
     const isCheckIn = type === 'check-in';
 
-    const [step, setStep] = useState(1); // 1: Camera, 2: Confirm & Submit
+    const [step, setStep] = useState(1); // 1: Camera, 2: Verifying, 3: Confirm & Submit
     const [photo, setPhoto] = useState(null);
     const [photoBlob, setPhotoBlob] = useState(null);
     const [location, setLocation] = useState(null);
@@ -22,9 +23,34 @@ export default function Attendance() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    // Face verification states
+    const [hasFaceRegistered, setHasFaceRegistered] = useState(null);
+    const [faceVerified, setFaceVerified] = useState(false);
+    const [faceVerifying, setFaceVerifying] = useState(false);
+    const [faceSimilarity, setFaceSimilarity] = useState(null);
+    const [storedDescriptor, setStoredDescriptor] = useState(null);
+
+    const { modelsLoaded, loading: modelsLoading, detectFaceFromImage, compareFaces } = useFaceApi();
+
     useEffect(() => {
         fetchLocations();
+        checkFaceStatus();
     }, []);
+
+    async function checkFaceStatus() {
+        try {
+            const status = await faceAPI.getStatus();
+            setHasFaceRegistered(status.has_face);
+
+            if (status.has_face) {
+                const descriptorData = await faceAPI.getMyDescriptor();
+                setStoredDescriptor(descriptorData.face_descriptor);
+            }
+        } catch (err) {
+            console.error('Failed to check face status:', err);
+            setHasFaceRegistered(false);
+        }
+    }
 
     async function fetchLocations() {
         try {
@@ -38,16 +64,66 @@ export default function Attendance() {
         }
     }
 
-    function handlePhotoCapture(blob, dataUrl) {
+    async function handlePhotoCapture(blob, dataUrl) {
         setPhotoBlob(blob);
         setPhoto(dataUrl);
-        setStep(2);
+
+        // If face is registered, verify it
+        if (hasFaceRegistered && storedDescriptor) {
+            setStep(2);
+            setFaceVerifying(true);
+            setError('');
+
+            try {
+                // Wait for models to load if not ready
+                if (!modelsLoaded) {
+                    setError('Model face recognition sedang dimuat. Mohon tunggu...');
+                    return;
+                }
+
+                // Detect face in captured photo
+                const detection = await detectFaceFromImage(dataUrl);
+
+                if (!detection) {
+                    setError('Wajah tidak terdeteksi. Pastikan wajah Anda terlihat jelas.');
+                    setFaceVerified(false);
+                    setStep(1);
+                    return;
+                }
+
+                // Compare with stored descriptor
+                const comparison = compareFaces(detection.descriptor, storedDescriptor);
+                setFaceSimilarity(comparison.similarity);
+
+                if (comparison.match) {
+                    setFaceVerified(true);
+                    setStep(3);
+                    setError('');
+                } else {
+                    setError(`Wajah tidak cocok. Kemiripan: ${comparison.similarity}%. Minimal 40% untuk diterima.`);
+                    setFaceVerified(false);
+                    setStep(1);
+                }
+            } catch (err) {
+                console.error('Face verification error:', err);
+                setError('Gagal memverifikasi wajah: ' + err.message);
+                setStep(1);
+            } finally {
+                setFaceVerifying(false);
+            }
+        } else {
+            // No face registered, skip verification
+            setStep(3);
+        }
     }
 
     function handlePhotoReset() {
         setPhoto(null);
         setPhotoBlob(null);
+        setFaceVerified(false);
+        setFaceSimilarity(null);
         setStep(1);
+        setError('');
     }
 
     function handleLocationUpdate(coords) {
@@ -57,6 +133,12 @@ export default function Attendance() {
     async function handleSubmit() {
         if (!photoBlob || !location) {
             setError('Foto dan lokasi harus tersedia');
+            return;
+        }
+
+        // Check face verification if registered
+        if (hasFaceRegistered && !faceVerified) {
+            setError('Verifikasi wajah diperlukan. Silakan ambil foto ulang.');
             return;
         }
 
@@ -91,6 +173,28 @@ export default function Attendance() {
         }
     }
 
+    // Show face registration required message
+    if (hasFaceRegistered === false) {
+        return (
+            <div>
+                <div className="page-header">
+                    <h1 className="page-title">🔐 Registrasi Wajah Diperlukan</h1>
+                </div>
+                <div className="card">
+                    <div className="empty-state">
+                        <div className="empty-state-icon">📸</div>
+                        <p className="empty-state-text">
+                            Wajah Anda belum terdaftar di sistem. Mohon hubungi admin untuk mendaftarkan wajah Anda sebelum dapat melakukan absensi.
+                        </p>
+                        <button className="btn btn-primary" onClick={() => navigate('/')}>
+                            Kembali ke Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div>
             <div className="page-header">
@@ -99,8 +203,16 @@ export default function Attendance() {
                 </h1>
                 <p className="page-subtitle">
                     {isCheckIn ? 'Absen masuk kerja' : 'Absen pulang kerja'}
+                    {hasFaceRegistered && <span style={{ marginLeft: '0.5rem', color: 'var(--success-500)' }}>🔐 Verifikasi Wajah Aktif</span>}
                 </p>
             </div>
+
+            {modelsLoading && (
+                <div className="alert alert-info mb-3">
+                    <span className="alert-icon">⏳</span>
+                    Memuat model face recognition... Mohon tunggu sebentar.
+                </div>
+            )}
 
             {error && (
                 <div className="alert alert-danger mb-3">
@@ -118,7 +230,7 @@ export default function Attendance() {
 
             {/* Progress Steps */}
             <div className="card mb-4" style={{ padding: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div style={{
                             width: 32,
@@ -132,28 +244,53 @@ export default function Attendance() {
                         }}>
                             1
                         </div>
-                        <span style={{ color: step >= 1 ? 'white' : 'var(--gray-500)' }}>Foto Selfie</span>
+                        <span style={{ color: step >= 1 ? 'white' : 'var(--gray-500)' }}>Foto</span>
                     </div>
                     <div style={{
-                        width: 40,
+                        width: 30,
                         height: 2,
                         background: step >= 2 ? 'var(--primary-500)' : 'var(--gray-700)',
                         alignSelf: 'center'
                     }} />
+                    {hasFaceRegistered && (
+                        <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: '50%',
+                                    background: step >= 2 ? (faceVerified ? 'var(--success-500)' : 'var(--warning-500)') : 'var(--gray-700)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 600
+                                }}>
+                                    {faceVerifying ? '⏳' : (faceVerified ? '✓' : '2')}
+                                </div>
+                                <span style={{ color: step >= 2 ? 'white' : 'var(--gray-500)' }}>Verifikasi</span>
+                            </div>
+                            <div style={{
+                                width: 30,
+                                height: 2,
+                                background: step >= 3 ? 'var(--primary-500)' : 'var(--gray-700)',
+                                alignSelf: 'center'
+                            }} />
+                        </>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div style={{
                             width: 32,
                             height: 32,
                             borderRadius: '50%',
-                            background: step >= 2 ? 'var(--gradient-primary)' : 'var(--gray-700)',
+                            background: step >= 3 ? 'var(--gradient-primary)' : 'var(--gray-700)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 600
                         }}>
-                            2
+                            {hasFaceRegistered ? '3' : '2'}
                         </div>
-                        <span style={{ color: step >= 2 ? 'white' : 'var(--gray-500)' }}>Konfirmasi</span>
+                        <span style={{ color: step >= 3 ? 'white' : 'var(--gray-500)' }}>Konfirmasi</span>
                     </div>
                 </div>
             </div>
@@ -165,16 +302,30 @@ export default function Attendance() {
                     </div>
                     <Camera onCapture={handlePhotoCapture} onReset={handlePhotoReset} />
                     <p className="text-muted text-center mt-2" style={{ fontSize: '0.85rem' }}>
-                        Posisikan wajah Anda di dalam kotak
+                        {hasFaceRegistered
+                            ? '🔐 Foto akan diverifikasi dengan wajah terdaftar'
+                            : 'Posisikan wajah Anda di dalam kotak'}
                     </p>
                 </div>
             )}
 
-            {step === 2 && (
+            {step === 2 && faceVerifying && (
+                <div className="card">
+                    <div className="empty-state" style={{ padding: '3rem' }}>
+                        <div className="loading-spinner" style={{ width: 48, height: 48, margin: '0 auto 1rem' }} />
+                        <p className="empty-state-text">Memverifikasi wajah...</p>
+                    </div>
+                </div>
+            )}
+
+            {step === 3 && (
                 <div className="grid grid-2">
                     <div className="card">
                         <div className="card-header">
                             <h2 className="card-title">📸 Foto Selfie</h2>
+                            {faceVerified && (
+                                <span className="badge badge-success">✅ Terverifikasi {faceSimilarity}%</span>
+                            )}
                         </div>
                         {photo && (
                             <img src={photo} alt="Captured" style={{ width: '100%', borderRadius: 'var(--radius-lg)' }} />
