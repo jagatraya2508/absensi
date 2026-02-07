@@ -14,11 +14,13 @@ export default function Sidebar() {
         { path: '/', icon: '🏠', label: 'Dashboard' },
         { path: '/attendance', icon: '📸', label: 'Absensi' },
         { path: '/history', icon: '📋', label: 'Riwayat' },
+        { path: '/leaves', icon: '📝', label: 'Izin & Cuti' },
     ];
 
     const adminItems = [
         { path: '/admin/locations', icon: '📍', label: 'Kelola Lokasi' },
         { path: '/admin/users', icon: '👥', label: 'Kelola User' },
+        { path: '/admin/leaves', icon: '📝', label: 'Kelola Izin' },
         { path: '/admin/reports', icon: '📊', label: 'Laporan' },
     ];
 

@@ -188,4 +188,39 @@ export const reportsAPI = {
     },
 };
 
-export default { authAPI, attendanceAPI, locationsAPI, reportsAPI };
+// Leaves API
+export const leavesAPI = {
+    // Create new leave request
+    create: (formData) => request('/leaves', {
+        method: 'POST',
+        body: formData, // FormData for file upload
+    }),
+
+    // Get my leave requests
+    getMy: (status) => {
+        const params = status ? `?status=${status}` : '';
+        return request(`/leaves/my${params}`);
+    },
+
+    // Get all leave requests (admin)
+    getAll: (status, userId) => {
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (userId) params.set('user_id', userId);
+        return request(`/leaves/all?${params}`);
+    },
+
+    // Get pending count (admin)
+    getPendingCount: () => request('/leaves/pending-count'),
+
+    // Approve/reject leave request (admin)
+    updateStatus: (id, status, adminNotes) => request(`/leaves/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, admin_notes: adminNotes }),
+    }),
+
+    // Delete leave request
+    delete: (id) => request(`/leaves/${id}`, { method: 'DELETE' }),
+};
+
+export default { authAPI, attendanceAPI, locationsAPI, reportsAPI, leavesAPI };

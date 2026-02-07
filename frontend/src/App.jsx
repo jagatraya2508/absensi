@@ -8,6 +8,8 @@ import History from './pages/History';
 import AdminLocations from './pages/AdminLocations';
 import AdminUsers from './pages/AdminUsers';
 import AdminReports from './pages/AdminReports';
+import Leaves from './pages/Leaves';
+import AdminLeaves from './pages/AdminLeaves';
 
 function ProtectedRoute({ children, adminOnly = false }) {
     const { user, loading } = useAuth();
@@ -121,6 +123,28 @@ function AppRoutes() {
                     <ProtectedRoute adminOnly>
                         <AppLayout>
                             <AdminReports />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/leaves"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <Leaves />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/leaves"
+                element={
+                    <ProtectedRoute adminOnly>
+                        <AppLayout>
+                            <AdminLeaves />
                         </AppLayout>
                     </ProtectedRoute>
                 }
