@@ -1,0 +1,4 @@
+# Environment variables - DO NOT COMMIT TO VERSION CONTROL
+.env
+.env.local
+.env.production
