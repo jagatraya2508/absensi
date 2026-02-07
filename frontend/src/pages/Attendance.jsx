@@ -173,8 +173,11 @@ export default function Attendance() {
         }
     }
 
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [registrationDescriptor, setRegistrationDescriptor] = useState(null);
+
     // Show face registration required message
-    if (hasFaceRegistered === false) {
+    if (hasFaceRegistered === false && !isRegistering) {
         return (
             <div>
                 <div className="page-header">
@@ -184,26 +187,83 @@ export default function Attendance() {
                     <div className="empty-state">
                         <div className="empty-state-icon">📸</div>
                         <p className="empty-state-text">
-                            Wajah Anda belum terdaftar di sistem. Mohon hubungi admin untuk mendaftarkan wajah Anda sebelum dapat melakukan absensi.
+                            Wajah Anda belum terdaftar di sistem. Anda perlu mendaftarkan wajah terlebih dahulu untuk dapat melakukan absensi.
                         </p>
-                        <button className="btn btn-primary" onClick={() => navigate('/')}>
-                            Kembali ke Dashboard
-                        </button>
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                            <button className="btn btn-primary" onClick={() => setIsRegistering(true)}>
+                                📸 Daftarkan Wajah Sekarang
+                            </button>
+                            <button className="btn btn-outline" onClick={() => navigate('/')}>
+                                Kembali ke Dashboard
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         );
     }
 
+    async function handleRegistrationCapture(blob, dataUrl) {
+        setPhotoBlob(blob);
+        setPhoto(dataUrl);
+        setError('');
+
+        try {
+            if (!modelsLoaded) {
+                setError('Model face recognition sedang dimuat...');
+                return;
+            }
+
+            const detection = await detectFaceFromImage(dataUrl);
+            if (!detection) {
+                setError('Wajah tidak teerdeteksi. Pastikan wajah terlihat jelas.');
+                return;
+            }
+
+            setRegistrationDescriptor(detection.descriptor);
+        } catch (err) {
+            console.error(err);
+            setError('Gagal memproses foto: ' + err.message);
+        }
+    }
+
+    async function handleRegisterFace() {
+        if (!registrationDescriptor) {
+            setError('Data wajah belum siap via foto.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await faceAPI.registerSelf(registrationDescriptor);
+            setSuccess('Wajah berhasil didaftarkan! Anda sekarang dapat melakukan absensi.');
+            setHasFaceRegistered(true);
+            setIsRegistering(false);
+            setStep(1);
+            setPhoto(null);
+            setPhotoBlob(null);
+            setRegistrationDescriptor(null);
+
+            // Re-fetch descriptor just to be sure
+            const descriptorData = await faceAPI.getMyDescriptor();
+            setStoredDescriptor(descriptorData.face_descriptor);
+
+        } catch (err) {
+            setError(err.message || 'Gagal mendaftarkan wajah');
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <div>
             <div className="page-header">
                 <h1 className="page-title">
-                    {isCheckIn ? '📥 Check-in' : '📤 Check-out'}
+                    {isRegistering ? '📝 Registrasi Wajah' : (isCheckIn ? '📥 Check-in' : '📤 Check-out')}
                 </h1>
                 <p className="page-subtitle">
-                    {isCheckIn ? 'Absen masuk kerja' : 'Absen pulang kerja'}
-                    {hasFaceRegistered && <span style={{ marginLeft: '0.5rem', color: 'var(--success-500)' }}>🔐 Verifikasi Wajah Aktif</span>}
+                    {isRegistering ? 'Ambil foto selfie untuk pendaftaran sistem' : (isCheckIn ? 'Absen masuk kerja' : 'Absen pulang kerja')}
+                    {hasFaceRegistered && !isRegistering && <span style={{ marginLeft: '0.5rem', color: 'var(--success-500)' }}>🔐 Verifikasi Wajah Aktif</span>}
                 </p>
             </div>
 
@@ -229,73 +289,110 @@ export default function Attendance() {
             )}
 
             {/* Progress Steps */}
-            <div className="card mb-4" style={{ padding: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: '50%',
-                            background: step >= 1 ? 'var(--gradient-primary)' : 'var(--gray-700)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 600
-                        }}>
-                            1
-                        </div>
-                        <span style={{ color: step >= 1 ? 'white' : 'var(--gray-500)' }}>Foto</span>
-                    </div>
-                    <div style={{
-                        width: 30,
-                        height: 2,
-                        background: step >= 2 ? 'var(--primary-500)' : 'var(--gray-700)',
-                        alignSelf: 'center'
-                    }} />
-                    {hasFaceRegistered && (
-                        <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <div style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: '50%',
-                                    background: step >= 2 ? (faceVerified ? 'var(--success-500)' : 'var(--warning-500)') : 'var(--gray-700)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontWeight: 600
-                                }}>
-                                    {faceVerifying ? '⏳' : (faceVerified ? '✓' : '2')}
-                                </div>
-                                <span style={{ color: step >= 2 ? 'white' : 'var(--gray-500)' }}>Verifikasi</span>
-                            </div>
+            {!isRegistering && (
+                <div className="card mb-4" style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <div style={{
-                                width: 30,
-                                height: 2,
-                                background: step >= 3 ? 'var(--primary-500)' : 'var(--gray-700)',
-                                alignSelf: 'center'
-                            }} />
-                        </>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: '50%',
-                            background: step >= 3 ? 'var(--gradient-primary)' : 'var(--gray-700)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 600
-                        }}>
-                            {hasFaceRegistered ? '3' : '2'}
+                                width: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                                background: step >= 1 ? 'var(--gradient-primary)' : 'var(--gray-700)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 600
+                            }}>
+                                1
+                            </div>
+                            <span style={{ color: step >= 1 ? 'white' : 'var(--gray-500)' }}>Foto</span>
                         </div>
-                        <span style={{ color: step >= 3 ? 'white' : 'var(--gray-500)' }}>Konfirmasi</span>
+                        <div style={{
+                            width: 30,
+                            height: 2,
+                            background: step >= 2 ? 'var(--primary-500)' : 'var(--gray-700)',
+                            alignSelf: 'center'
+                        }} />
+                        {hasFaceRegistered && (
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: '50%',
+                                        background: step >= 2 ? (faceVerified ? 'var(--success-500)' : 'var(--warning-500)') : 'var(--gray-700)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 600
+                                    }}>
+                                        {faceVerifying ? '⏳' : (faceVerified ? '✓' : '2')}
+                                    </div>
+                                    <span style={{ color: step >= 2 ? 'white' : 'var(--gray-500)' }}>Verifikasi</span>
+                                </div>
+                                <div style={{
+                                    width: 30,
+                                    height: 2,
+                                    background: step >= 3 ? 'var(--primary-500)' : 'var(--gray-700)',
+                                    alignSelf: 'center'
+                                }} />
+                            </>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                                background: step >= 3 ? 'var(--gradient-primary)' : 'var(--gray-700)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 600
+                            }}>
+                                {hasFaceRegistered ? '3' : '2'}
+                            </div>
+                            <span style={{ color: step >= 3 ? 'white' : 'var(--gray-500)' }}>Konfirmasi</span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
-            {step === 1 && (
+            {isRegistering && (
+                <div className="card mb-4">
+                    <div className="card-header">
+                        <h2 className="card-title">📝 Pendaftaran Wajah</h2>
+                    </div>
+                    {!photo ? (
+                        <>
+                            <Camera onCapture={handleRegistrationCapture} onReset={handlePhotoReset} />
+                            <p className="text-muted text-center mt-2">
+                                Posisikan wajah Anda di dalam kotak dan pastikan pencahayaan cukup.
+                            </p>
+                            <button className="btn btn-outline btn-block mt-3" onClick={() => {
+                                setIsRegistering(false);
+                                setPhoto(null);
+                                setError('');
+                            }}>
+                                Batal
+                            </button>
+                        </>
+                    ) : (
+                        <div className="p-3">
+                            <img src={photo} alt="Result" style={{ width: '100%', borderRadius: 'var(--radius-lg)' }} />
+                            <div className="mt-3">
+                                <button className="btn btn-primary btn-block mb-2" onClick={handleRegisterFace} disabled={loading}>
+                                    {loading ? 'Menyimpan...' : '💾 Simpan Wajah Ini'}
+                                </button>
+                                <button className="btn btn-outline btn-block" onClick={handlePhotoReset} disabled={loading}>
+                                    🔄 Ambil Ulang
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {!isRegistering && step === 1 && (
                 <div className="card">
                     <div className="card-header">
                         <h2 className="card-title">📸 Ambil Foto Selfie</h2>
@@ -309,7 +406,7 @@ export default function Attendance() {
                 </div>
             )}
 
-            {step === 2 && faceVerifying && (
+            {!isRegistering && step === 2 && faceVerifying && (
                 <div className="card">
                     <div className="empty-state" style={{ padding: '3rem' }}>
                         <div className="loading-spinner" style={{ width: 48, height: 48, margin: '0 auto 1rem' }} />
@@ -318,7 +415,7 @@ export default function Attendance() {
                 </div>
             )}
 
-            {step === 3 && (
+            {!isRegistering && step === 3 && (
                 <div className="grid grid-2">
                     <div className="card">
                         <div className="card-header">
