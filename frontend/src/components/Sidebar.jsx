@@ -26,7 +26,7 @@ export default function Sidebar() {
         <>
             <aside className="sidebar">
                 <div className="sidebar-logo">
-                    <div className="sidebar-logo-icon">📱</div>
+                    <img src="/logo.png" alt="Logo" style={{ width: '40px', height: 'auto' }} />
                     <div>
                         <h1>Absensi</h1>
                         <span>Attendance System</span>

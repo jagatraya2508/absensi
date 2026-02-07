@@ -31,7 +31,7 @@ export default function Login() {
             <div className="login-container">
                 <div className="login-card">
                     <div className="login-logo">
-                        <div className="login-logo-icon">📱</div>
+                        <img src="/logo.png" alt="Logo" style={{ width: '80px', height: 'auto', marginBottom: '1rem' }} />
                         <h1>Absensi Karyawan</h1>
                         <p>Silakan login untuk melanjutkan</p>
                     </div>

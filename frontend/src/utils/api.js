@@ -1,4 +1,5 @@
-const API_BASE = '/api';
+// Use environment variable for production, fallback to /api for development (proxied by Vite)
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 // Helper to get auth token
 function getToken() {
