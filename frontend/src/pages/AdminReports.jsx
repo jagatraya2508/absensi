@@ -262,11 +262,21 @@ export default function AdminReports() {
                                         <td>{record.location_name || '-'}</td>
                                         <td>
                                             {record.check_in_time && record.check_out_time ? (
-                                                <span className="badge badge-success">Lengkap</span>
+                                                <span className="badge badge-success">✅ Lengkap</span>
                                             ) : record.check_in_time ? (
-                                                <span className="badge badge-warning">Belum Pulang</span>
+                                                record.leave_type === 'late' ? (
+                                                    <span className="badge badge-warning">⏰ Terlambat</span>
+                                                ) : (
+                                                    <span className="badge badge-warning">⏳ Belum Pulang</span>
+                                                )
+                                            ) : record.leave_type === 'sick' ? (
+                                                <span className="badge badge-danger">🏥 Sakit</span>
+                                            ) : record.leave_type === 'leave' ? (
+                                                <span className="badge badge-primary">🏖️ Cuti</span>
+                                            ) : record.leave_type === 'late' ? (
+                                                <span className="badge badge-warning">⏰ Izin Terlambat</span>
                                             ) : (
-                                                <span className="badge badge-danger">Tidak Hadir</span>
+                                                <span className="badge badge-danger">❌ Tidak Hadir</span>
                                             )}
                                         </td>
                                     </tr>
