@@ -89,32 +89,75 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="card mb-4">
-                <div className="card-header">
-                    <h2 className="card-title">Absensi</h2>
-                </div>
-
-                <div className="grid grid-2">
+            {/* Quick Actions & Menus (Talenta Style) */}
+            <div className="mb-4">
+                {/* Attendance Buttons - Compact & Side by Side */}
+                <div className="attendance-action-grid gap-3 mb-4">
                     <Link
                         to="/attendance?type=check-in"
-                        className={`btn attendance-btn ${todayStatus?.checked_in ? 'btn-outline' : 'btn-success'}`}
-                        style={{ pointerEvents: todayStatus?.checked_in ? 'none' : 'auto', opacity: todayStatus?.checked_in ? 0.5 : 1 }}
+                        className={`btn-attendance-compact ${todayStatus?.checked_in ? 'disabled' : 'primary'}`}
+                        style={{ pointerEvents: todayStatus?.checked_in ? 'none' : 'auto' }}
                     >
-                        <span className="attendance-btn-icon">📥</span>
-                        Check-in
-                        {todayStatus?.checked_in && <span style={{ fontSize: '0.8rem' }}>✓ Selesai</span>}
+                        <div className="icon-wrapper">
+                            <span className="icon">📥</span>
+                        </div>
+                        <div className="text-wrapper">
+                            <span className="label">Check-in</span>
+                            <span className="sub-label">{todayStatus?.checked_in ? 'Sudah Absen' : 'Masuk Kerja'}</span>
+                        </div>
+                        {todayStatus?.checked_in && <div className="status-badge">✓</div>}
                     </Link>
 
                     <Link
                         to="/attendance?type=check-out"
-                        className={`btn attendance-btn ${!todayStatus?.checked_in || todayStatus?.checked_out ? 'btn-outline' : 'btn-danger'}`}
-                        style={{ pointerEvents: (!todayStatus?.checked_in || todayStatus?.checked_out) ? 'none' : 'auto', opacity: (!todayStatus?.checked_in || todayStatus?.checked_out) ? 0.5 : 1 }}
+                        className={`btn-attendance-compact ${(!todayStatus?.checked_in || todayStatus?.checked_out) ? 'disabled' : 'danger'}`}
+                        style={{ pointerEvents: (!todayStatus?.checked_in || todayStatus?.checked_out) ? 'none' : 'auto' }}
                     >
-                        <span className="attendance-btn-icon">📤</span>
-                        Check-out
-                        {todayStatus?.checked_out && <span style={{ fontSize: '0.8rem' }}>✓ Selesai</span>}
+                        <div className="icon-wrapper">
+                            <span className="icon">📤</span>
+                        </div>
+                        <div className="text-wrapper">
+                            <span className="label">Check-out</span>
+                            <span className="sub-label">{todayStatus?.checked_out ? 'Sudah Absen' : 'Pulang Kerja'}</span>
+                        </div>
+                        {todayStatus?.checked_out && <div className="status-badge">✓</div>}
                     </Link>
+                </div>
+
+                {/* User Menus Grid */}
+                <div className="menu-grid">
+                    <Link to="/history" className="menu-item">
+                        <div className="menu-icon bg-blue-100 text-blue-600">📋</div>
+                        <span className="menu-label">Riwayat</span>
+                    </Link>
+                    <Link to="/leaves" className="menu-item">
+                        <div className="menu-icon bg-green-100 text-green-600">📝</div>
+                        <span className="menu-label">Izin & Cuti</span>
+                    </Link>
+                    <Link to="/change-password" className="menu-item">
+                        <div className="menu-icon bg-purple-100 text-purple-600">🔑</div>
+                        <span className="menu-label">Ubah Password</span>
+                    </Link>
+                    {user?.role === 'admin' && (
+                        <>
+                            <Link to="/admin/users" className="menu-item">
+                                <div className="menu-icon bg-pink-100 text-pink-600">👥</div>
+                                <span className="menu-label">Kelola User</span>
+                            </Link>
+                            <Link to="/admin/leaves" className="menu-item">
+                                <div className="menu-icon bg-teal-100 text-teal-600">📝</div>
+                                <span className="menu-label">Kelola Izin</span>
+                            </Link>
+                            <Link to="/admin/reports" className="menu-item">
+                                <div className="menu-icon bg-orange-100 text-orange-600">📊</div>
+                                <span className="menu-label">Laporan</span>
+                            </Link>
+                            <Link to="/admin/face-registration" className="menu-item">
+                                <div className="menu-icon bg-indigo-100 text-indigo-600">🔐</div>
+                                <span className="menu-label">Registrasi Wajah</span>
+                            </Link>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -173,55 +216,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* Riwayat Terbaru */}
-            <div className="card">
-                <div className="card-header">
-                    <h2 className="card-title">Riwayat Terbaru</h2>
-                    <Link to="/history" className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
-                        Lihat Semua
-                    </Link>
-                </div>
 
-                {history.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-state-icon">📋</div>
-                        <p className="empty-state-text">Belum ada riwayat absensi</p>
-                    </div>
-                ) : (
-                    <div className="table-container">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Tipe</th>
-                                    <th>Waktu</th>
-                                    <th>Lokasi</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {history.slice(0, 5).map((record) => (
-                                    <tr key={record.id}>
-                                        <td>{new Date(record.recorded_at).toLocaleDateString('id-ID')}</td>
-                                        <td>
-                                            <span className={`badge ${record.type === 'check_in' ? 'badge-primary' : 'badge-warning'}`}>
-                                                {record.type === 'check_in' ? 'Masuk' : 'Pulang'}
-                                            </span>
-                                        </td>
-                                        <td>{formatTime(record.recorded_at)}</td>
-                                        <td>{record.location_name || '-'}</td>
-                                        <td>
-                                            <span className={`badge ${record.is_valid ? 'badge-success' : 'badge-warning'}`}>
-                                                {record.is_valid ? 'Valid' : 'Diluar Area'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
         </div>
     );
 }

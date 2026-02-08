@@ -1497,3 +1497,218 @@ body {
     width: 100%;
   }
 }
+
+/* ========================================
+   DASHBOARD - TALENTA STYLE
+   ======================================== */
+
+.attendance-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* Force 2 columns */
+}
+
+
+/* Compact Attendance Buttons */
+.btn-attendance-compact {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  /* Glass effect default */
+}
+
+.btn-attendance-compact.primary {
+  background: var(--gradient-success);
+  /* Green for Check-in */
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-attendance-compact.danger {
+  background: var(--gradient-danger);
+  /* Red for Check-out */
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-attendance-compact.disabled {
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0.6;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.btn-attendance-compact:hover:not(.disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.btn-attendance-compact .icon-wrapper {
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.btn-attendance-compact .text-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-attendance-compact .label {
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.btn-attendance-compact .sub-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.75rem;
+}
+
+.btn-attendance-compact .status-badge {
+  background: white;
+  color: var(--success-600);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+/* Mobile Optimizations for Attendance Buttons */
+@media (max-width: 640px) {
+  .btn-attendance-compact {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .btn-attendance-compact .icon-wrapper {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .btn-attendance-compact .label {
+    font-size: 0.85rem;
+  }
+
+  .btn-attendance-compact .sub-label {
+    font-size: 0.65rem;
+  }
+
+  .btn-attendance-compact .status-badge {
+    width: 18px;
+    height: 18px;
+    font-size: 0.6rem;
+  }
+}
+
+/* Menu Grid */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  /* background: rgba(255, 255, 255, 0.05); Removed background from container to match Talenta clean style */
+  /* padding: 1.25rem; */
+  /* border: 1px solid rgba(255, 255, 255, 0.1); */
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-lg);
+  transition: background-color var(--transition);
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.menu-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: transform var(--transition);
+}
+
+.menu-item:hover .menu-icon {
+  transform: scale(1.1);
+}
+
+/* Specific colors for menu icons */
+.menu-icon.bg-blue-100 {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  color: #0284c7;
+}
+
+.menu-icon.bg-green-100 {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #16a34a;
+}
+
+.menu-icon.bg-purple-100 {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  color: #9333ea;
+}
+
+.menu-icon.bg-orange-100 {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #ea580c;
+}
+
+.menu-label {
+  color: var(--gray-300);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.menu-item:hover .menu-label {
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .menu-grid {
+    grid-template-columns: repeat(4, 1fr);
+    /* Keep 4 for mobile if possible, or 3? Talenta usually 4 */
+    gap: 0.5rem;
+  }
+
+  .menu-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .menu-label {
+    font-size: 0.7rem;
+  }
+}
