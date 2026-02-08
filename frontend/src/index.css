@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 /* ========================================
    ABSENSI KARYAWAN - Design System
    Modern, Premium, Glassmorphism Style
@@ -95,8 +97,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Import Google Font */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ========================================
    LAYOUT COMPONENTS
