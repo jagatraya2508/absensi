@@ -1266,21 +1266,40 @@ body {
   /* Camera on mobile */
   .camera-container {
     max-width: 100%;
+    margin-bottom: 0;
+  }
+
+  .camera-video {
+    height: 350px;
+    /* Fixed height for mobile to prevent overflow */
+    object-fit: cover;
+    /* Crop to fill */
+    margin-bottom: 0.5rem;
   }
 
   .camera-overlay {
     width: 140px;
     height: 180px;
+    border-width: 2px;
+  }
+
+  /* Position controls over the bottom of the video or just cleaner below */
+  .camera-controls {
+    margin-top: 0.5rem;
+    gap: 1.5rem;
   }
 
   .camera-btn {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 60px;
+    border-width: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    /* Semi-transparent background */
   }
 
   .camera-btn-inner {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 
   /* Photo thumbnails */
