@@ -1293,9 +1293,9 @@ body {
     margin-top: 0.5rem;
     gap: 1.5rem;
     display: flex;
-    /* Ensure flex layout */
+    flex-direction: column;
+    /* Stack buttons vertically */
     justify-content: center;
-    /* Center buttons */
     align-items: center;
   }
 
