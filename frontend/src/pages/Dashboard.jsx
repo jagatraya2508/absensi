@@ -69,6 +69,54 @@ export default function Dashboard() {
                 <p className="page-subtitle">{today}</p>
             </div>
 
+
+            {/* Announcements Section (Top) */}
+            {announcements.length > 0 && (
+                <div className="mb-4">
+                    {announcements.map(item => (
+                        <div key={item.id} className="card-glass mb-3" style={{
+                            background: 'linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05))',
+                            borderLeft: '4px solid var(--primary-500)',
+                            padding: '1rem 1.5rem',
+                            position: 'relative',
+                            overflow: 'hidden'
+                        }}>
+                            <div style={{ position: 'absolute', top: -10, right: -10, fontSize: '5rem', opacity: 0.05, transform: 'rotate(15deg)' }}>
+                                📢
+                            </div>
+                            <div className="d-flex align-items-center gap-3 mb-2">
+                                <div style={{
+                                    background: 'var(--primary-500)',
+                                    color: 'white',
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '0.9rem'
+                                }}>
+                                    📢
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'white' }}>
+                                        {item.title}
+                                    </h3>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--primary-300)' }}>
+                                        {formatDate(item.created_at)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div style={{ paddingLeft: '3.25rem' }}>
+                                <p style={{ margin: 0, whiteSpace: 'pre-line', color: 'var(--gray-200)', lineHeight: '1.6' }}>
+                                    {item.content}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Status Absensi Hari Ini */}
             <div className="grid grid-2 mb-4">
                 <div className="card status-card">
@@ -92,23 +140,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Announcements Section */}
-            {announcements.length > 0 && (
-                <div className="mb-4">
-                    {announcements.map(item => (
-                        <div key={item.id} className="alert alert-info mb-2">
-                            <div className="d-flex align-items-center gap-2 mb-1">
-                                <span style={{ fontSize: '1.2rem' }}>📢</span>
-                                <strong style={{ fontSize: '1rem' }}>{item.title}</strong>
-                            </div>
-                            <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{item.content}</p>
-                            <div className="text-muted mt-1" style={{ fontSize: '0.75rem' }}>
-                                {formatDate(item.created_at)}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
 
             {/* Quick Actions & Menus (Talenta Style) */}
             <div className="mb-4">
