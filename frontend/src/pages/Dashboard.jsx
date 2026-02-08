@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { attendanceAPI } from '../utils/api';
+import { attendanceAPI, announcementsAPI } from '../utils/api';
 
 export default function Dashboard() {
     const { user } = useAuth();
     const [todayStatus, setTodayStatus] = useState(null);
     const [history, setHistory] = useState([]);
+    const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -15,12 +16,14 @@ export default function Dashboard() {
 
     async function fetchData() {
         try {
-            const [statusData, historyData] = await Promise.all([
+            const [statusData, historyData, announcementsData] = await Promise.all([
                 attendanceAPI.getToday(),
-                attendanceAPI.getHistory({ limit: 10 })
+                attendanceAPI.getHistory({ limit: 10 }),
+                announcementsAPI.getActive()
             ]);
             setTodayStatus(statusData);
             setHistory(historyData);
+            setAnnouncements(announcementsData);
         } catch (error) {
             console.error('Failed to fetch data:', error);
         } finally {
@@ -88,6 +91,24 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Announcements Section */}
+            {announcements.length > 0 && (
+                <div className="mb-4">
+                    {announcements.map(item => (
+                        <div key={item.id} className="alert alert-info mb-2">
+                            <div className="d-flex align-items-center gap-2 mb-1">
+                                <span style={{ fontSize: '1.2rem' }}>📢</span>
+                                <strong style={{ fontSize: '1rem' }}>{item.title}</strong>
+                            </div>
+                            <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{item.content}</p>
+                            <div className="text-muted mt-1" style={{ fontSize: '0.75rem' }}>
+                                {formatDate(item.created_at)}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Quick Actions & Menus (Talenta Style) */}
             <div className="mb-4">

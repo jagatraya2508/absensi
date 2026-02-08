@@ -23,6 +23,7 @@ export default function Sidebar() {
         { path: '/admin/users', icon: '👥', label: 'Kelola User' },
         { path: '/admin/face-registration', icon: '🔐', label: 'Registrasi Wajah' },
         { path: '/admin/leaves', icon: '📝', label: 'Kelola Izin' },
+        { path: '/admin/announcements', icon: '📢', label: 'Kelola Pengumuman' },
         { path: '/admin/reports', icon: '📊', label: 'Laporan' },
     ];
 

@@ -267,4 +267,19 @@ export const faceAPI = {
     delete: (userId) => request(`/face/${userId}`, { method: 'DELETE' }),
 };
 
-export default { authAPI, attendanceAPI, locationsAPI, reportsAPI, leavesAPI, faceAPI };
+// Announcements API
+export const announcementsAPI = {
+    getAll: () => request('/announcements'),
+    getActive: () => request('/announcements/active'),
+    create: (data) => request('/announcements', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    update: (id, data) => request(`/announcements/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    delete: (id) => request(`/announcements/${id}`, { method: 'DELETE' }),
+};
+
+export default { authAPI, attendanceAPI, locationsAPI, reportsAPI, leavesAPI, faceAPI, announcementsAPI };

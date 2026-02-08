@@ -68,3 +68,18 @@ CREATE INDEX IF NOT EXISTS idx_leave_date ON leave_requests(start_date);
 INSERT INTO users (employee_id, name, email, password, role) 
 VALUES ('ADMIN001', 'Administrator', 'admin@company.com', '$2b$10$rQZ5QH2V5Y1vX8W6x9Y8/.O7kJ6H5F4G3D2C1B0A9N8M7L6K5J4I3', 'admin')
 ON CONFLICT (employee_id) DO NOTHING;
+
+-- Tabel Announcements (Pengumuman)
+CREATE TABLE IF NOT EXISTS announcements (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index untuk announcements
+CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(is_active);
+CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);

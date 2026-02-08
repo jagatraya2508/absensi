@@ -11,6 +11,7 @@ import AdminReports from './pages/AdminReports';
 import AdminFaceRegistration from './pages/AdminFaceRegistration';
 import Leaves from './pages/Leaves';
 import AdminLeaves from './pages/AdminLeaves';
+import AdminAnnouncements from './pages/AdminAnnouncements';
 import ChangePassword from './pages/ChangePassword';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -169,6 +170,17 @@ function AppRoutes() {
                     <ProtectedRoute adminOnly>
                         <AppLayout>
                             <AdminLeaves />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/announcements"
+                element={
+                    <ProtectedRoute adminOnly>
+                        <AppLayout>
+                            <AdminAnnouncements />
                         </AppLayout>
                     </ProtectedRoute>
                 }
