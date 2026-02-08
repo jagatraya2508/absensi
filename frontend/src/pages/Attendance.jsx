@@ -179,7 +179,7 @@ export default function Attendance() {
     // Show face registration required message
     if (hasFaceRegistered === false && !isRegistering) {
         return (
-            <div>
+            <div className="attendance-container">
                 <div className="page-header">
                     <h1 className="page-title">🔐 Registrasi Wajah Diperlukan</h1>
                 </div>
@@ -256,7 +256,7 @@ export default function Attendance() {
     }
 
     return (
-        <div>
+        <div className="attendance-container">
             <div className="page-header">
                 <h1 className="page-title">
                     {isRegistering ? '📝 Registrasi Wajah' : (isCheckIn ? '📥 Check-in' : '📤 Check-out')}

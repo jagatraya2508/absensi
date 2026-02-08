@@ -1269,16 +1269,20 @@ body {
     margin-bottom: 0;
   }
 
+  .camera-view-wrapper {
+    position: relative;
+    width: fit-content;
+    margin: 0 auto 0.5rem;
+  }
+
   .camera-video {
     width: 260px;
-    /* Fixed width for portrait aspect */
     height: 340px;
-    /* Fixed height for portrait aspect (3:4 ratioish) */
     object-fit: cover;
-    margin: 0 auto 0.5rem;
-    /* Center the video */
     display: block;
     border-radius: var(--radius-lg);
+    margin: 0;
+    /* Let wrapper handle margin */
   }
 
   .camera-overlay {
@@ -1286,6 +1290,13 @@ body {
     height: 240px;
     border-width: 2px;
     border-radius: var(--radius-lg);
+    /* Absolute center over video */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    /* Allow clicks to pass through */
   }
 
   /* Position controls over the bottom of the video or just cleaner below */
@@ -1395,6 +1406,17 @@ body {
     flex-direction: column !important;
     align-items: flex-start !important;
   }
+}
+
+/* Attendance Page Container */
+.attendance-container {
+  max-width: 480px;
+  /* Limit width like mobile */
+  margin: 0 auto;
+  /* Center horizontally */
+  width: 100%;
+  padding-bottom: 5rem;
+  /* Space for bottom nav */
 }
 
 /* Extra small screen (below 480px) */

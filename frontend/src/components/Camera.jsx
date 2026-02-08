@@ -115,14 +115,16 @@ export default function Camera({ onCapture, onReset }) {
 
             {!photo ? (
                 <>
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="camera-video"
-                    />
-                    <div className="camera-overlay" />
+                    <div className="camera-view-wrapper">
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="camera-video"
+                        />
+                        <div className="camera-overlay" />
+                    </div>
 
                     <div className="camera-controls">
                         <button
