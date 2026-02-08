@@ -201,6 +201,10 @@ export default function Dashboard() {
                     </Link>
                     {user?.role === 'admin' && (
                         <>
+                            <Link to="/admin/announcements" className="menu-item">
+                                <div className="menu-icon bg-yellow-100 text-yellow-600">📢</div>
+                                <span className="menu-label">Pengumuman</span>
+                            </Link>
                             <Link to="/admin/locations" className="menu-item">
                                 <div className="menu-icon bg-red-100 text-red-600">📍</div>
                                 <span className="menu-label">Kelola Lokasi</span>
