@@ -9,6 +9,7 @@ echo "=========================="
 
 # 1. Tarik kode terbaru dari Git
 echo "[1/4] Pulling latest code..."
+git config pull.rebase false
 git pull origin main
 
 # 2. Install dependencies (jika ada update library)
