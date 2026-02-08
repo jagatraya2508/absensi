@@ -1292,6 +1292,18 @@ body {
   .camera-controls {
     margin-top: 0.5rem;
     gap: 1.5rem;
+    display: flex;
+    /* Ensure flex layout */
+    justify-content: center;
+    /* Center buttons */
+    align-items: center;
+  }
+
+  .camera-controls .btn {
+    width: auto;
+    /* Fix button width on mobile */
+    padding: 0.5rem 1rem;
+    /* Adjust padding */
   }
 
   .camera-btn {
