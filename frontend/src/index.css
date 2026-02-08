@@ -1270,17 +1270,22 @@ body {
   }
 
   .camera-video {
-    height: 350px;
-    /* Fixed height for mobile to prevent overflow */
+    width: 260px;
+    /* Fixed width for portrait aspect */
+    height: 340px;
+    /* Fixed height for portrait aspect (3:4 ratioish) */
     object-fit: cover;
-    /* Crop to fill */
-    margin-bottom: 0.5rem;
+    margin: 0 auto 0.5rem;
+    /* Center the video */
+    display: block;
+    border-radius: var(--radius-lg);
   }
 
   .camera-overlay {
     width: 180px;
-    height: 230px;
+    height: 240px;
     border-width: 2px;
+    border-radius: var(--radius-lg);
   }
 
   /* Position controls over the bottom of the video or just cleaner below */
