@@ -62,8 +62,17 @@ export default function Dashboard() {
         day: 'numeric'
     });
 
+
     return (
         <div>
+            {/* Background Watermark */}
+            <img
+                src="/logo.png"
+                alt=""
+                className="dashboard-watermark"
+                onError={(e) => e.target.style.display = 'none'}
+            />
+
             <div className="page-header">
                 <h1 className="page-title">Selamat Datang, {user?.name?.split(' ')[0]}! 👋</h1>
                 <p className="page-subtitle">{today}</p>
