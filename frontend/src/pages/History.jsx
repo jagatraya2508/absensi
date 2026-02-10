@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { attendanceAPI, authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import ImageModal from '../components/ImageModal';
 
 export default function History() {
     const { user } = useAuth();
@@ -11,6 +12,9 @@ export default function History() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [selectedUser, setSelectedUser] = useState('all');
+
+    // Image Modal State
+    const [selectedImg, setSelectedImg] = useState({ src: '', caption: '', isOpen: false });
 
     const isAdmin = user?.role === 'admin';
 
@@ -190,6 +194,11 @@ export default function History() {
                                         src={record.photo_path}
                                         alt={record.type}
                                         className="photo-thumb-lg"
+                                        onClick={() => setSelectedImg({
+                                            src: record.photo_path,
+                                            caption: `${record.user_name || user?.name} - ${formatDate(record.recorded_at)} ${formatTime(record.recorded_at)}`,
+                                            isOpen: true
+                                        })}
                                     />
                                     <div style={{ flex: 1 }}>
                                         {isAdmin && record.user_name && (
@@ -245,6 +254,13 @@ export default function History() {
                     </div>
                 ))
             )}
+
+            <ImageModal
+                isOpen={selectedImg.isOpen}
+                onClose={() => setSelectedImg({ ...selectedImg, isOpen: false })}
+                imgSrc={selectedImg.src}
+                caption={selectedImg.caption}
+            />
         </div>
     );
 

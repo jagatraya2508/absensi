@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +13,7 @@ import AdminFaceRegistration from './pages/AdminFaceRegistration';
 import Leaves from './pages/Leaves';
 import AdminLeaves from './pages/AdminLeaves';
 import AdminAnnouncements from './pages/AdminAnnouncements';
+import AdminSettings from './pages/AdminSettings';
 import ChangePassword from './pages/ChangePassword';
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -186,6 +188,17 @@ function AppRoutes() {
                 }
             />
 
+            <Route
+                path="/admin/settings"
+                element={
+                    <ProtectedRoute adminOnly>
+                        <AppLayout>
+                            <AdminSettings />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
@@ -194,9 +207,11 @@ function AppRoutes() {
 export default function App() {
     return (
         <BrowserRouter>
-            <AuthProvider>
-                <AppRoutes />
-            </AuthProvider>
+            <SettingsProvider>
+                <AuthProvider>
+                    <AppRoutes />
+                </AuthProvider>
+            </SettingsProvider>
         </BrowserRouter>
     );
 }

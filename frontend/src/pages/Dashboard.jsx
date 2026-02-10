@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { attendanceAPI, announcementsAPI } from '../utils/api';
+import ImageModal from '../components/ImageModal';
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const { settings } = useSettings();
     const [todayStatus, setTodayStatus] = useState(null);
     const [history, setHistory] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Image Modal State
+    const [selectedImg, setSelectedImg] = useState({ src: '', caption: '', isOpen: false });
 
     useEffect(() => {
         fetchData();
@@ -67,7 +73,7 @@ export default function Dashboard() {
         <div>
             {/* Background Watermark */}
             <img
-                src="/logo.png"
+                src={settings.app_logo}
                 alt=""
                 className="dashboard-watermark"
                 onError={(e) => e.target.style.display = 'none'}
@@ -244,6 +250,11 @@ export default function Dashboard() {
                                     src={todayStatus.check_in.photo_path}
                                     alt="Check-in"
                                     className="photo-thumb-lg"
+                                    onClick={() => setSelectedImg({
+                                        src: todayStatus.check_in.photo_path,
+                                        caption: `Check-in - ${formatDate(todayStatus.check_in.recorded_at)} ${formatTime(todayStatus.check_in.recorded_at)}`,
+                                        isOpen: true
+                                    })}
                                 />
                                 <div>
                                     <div className="text-muted" style={{ fontSize: '0.75rem' }}>Check-in</div>
@@ -266,6 +277,11 @@ export default function Dashboard() {
                                     src={todayStatus.check_out.photo_path}
                                     alt="Check-out"
                                     className="photo-thumb-lg"
+                                    onClick={() => setSelectedImg({
+                                        src: todayStatus.check_out.photo_path,
+                                        caption: `Check-out - ${formatDate(todayStatus.check_out.recorded_at)} ${formatTime(todayStatus.check_out.recorded_at)}`,
+                                        isOpen: true
+                                    })}
                                 />
                                 <div>
                                     <div className="text-muted" style={{ fontSize: '0.75rem' }}>Check-out</div>
@@ -284,6 +300,13 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
+
+            <ImageModal
+                isOpen={selectedImg.isOpen}
+                onClose={() => setSelectedImg({ ...selectedImg, isOpen: false })}
+                imgSrc={selectedImg.src}
+                caption={selectedImg.caption}
+            />
 
 
         </div>

@@ -13,6 +13,7 @@ const reportsRoutes = require('./routes/reports');
 const leavesRoutes = require('./routes/leaves');
 const faceRoutes = require('./routes/face');
 const announcementsRoutes = require('./routes/announcements');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,6 +40,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/leaves', leavesRoutes);
 app.use('/api/face', faceRoutes);
 app.use('/api/announcements', announcementsRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -56,6 +58,14 @@ async function initDatabase() {
         console.error('Error initializing database:', error);
     }
 }
+
+// Error handler middleware
+app.use((err, req, res, next) => {
+    console.error('SERVER ERROR:', err);
+    res.status(err.status || 500).json({
+        error: err.message || 'Terjadi kesalahan server internal'
+    });
+});
 
 // Start server
 app.listen(PORT, async () => {

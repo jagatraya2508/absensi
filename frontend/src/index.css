@@ -548,7 +548,8 @@ body {
   background-position: right 1rem center;
   background-size: 1rem;
   padding-right: 2.5rem;
-  background-color: rgba(30, 41, 59, 1); /* Solid dark background for select */
+  background-color: rgba(30, 41, 59, 1);
+  /* Solid dark background for select */
 }
 
 .form-select option {
@@ -1825,5 +1826,124 @@ body {
 
   .menu-label {
     font-size: 0.7rem;
+  }
+}
+
+/* ========================================
+   IMAGE PREVIEW MODAL
+   ======================================== */
+.image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 2rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.image-modal-img {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border: 4px solid rgba(255, 255, 255, 0.1);
+}
+
+.image-modal-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: white;
+  color: black;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: all 0.2s;
+  border: none;
+  z-index: 10001;
+}
+
+.image-modal-close:hover {
+  transform: scale(1.1) rotate(90deg);
+  background: var(--danger-500);
+  color: white;
+}
+
+.image-modal-caption {
+  color: white;
+  margin-top: 1rem;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 1.5rem;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+}
+
+/* Photo Thumbnail Hover Effect */
+.photo-thumb-lg {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.photo-thumb-lg:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .image-modal-overlay {
+    padding: 1rem;
+  }
+
+  .image-modal-close {
+    top: -40px;
+    right: 0;
   }
 }

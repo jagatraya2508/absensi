@@ -1,8 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 export default function Sidebar() {
     const { user, logout } = useAuth();
+    const { settings } = useSettings();
     const navigate = useNavigate();
 
     function handleLogout() {
@@ -24,6 +26,7 @@ export default function Sidebar() {
         { path: '/admin/face-registration', icon: '🔐', label: 'Registrasi Wajah' },
         { path: '/admin/leaves', icon: '📝', label: 'Kelola Izin' },
         { path: '/admin/announcements', icon: '📢', label: 'Kelola Pengumuman' },
+        { path: '/admin/settings', icon: '⚙️', label: 'Pengaturan' },
         { path: '/admin/reports', icon: '📊', label: 'Laporan' },
     ];
 
@@ -31,7 +34,7 @@ export default function Sidebar() {
         <>
             <aside className="sidebar">
                 <div className="sidebar-logo">
-                    <img src="/logo.png" alt="Logo" style={{ width: '40px', height: 'auto' }} />
+                    <img src={settings.app_logo} alt="Logo" style={{ width: '40px', height: 'auto' }} />
                     <div>
                         <h1>Absensi</h1>
                         <span>Attendance System</span>

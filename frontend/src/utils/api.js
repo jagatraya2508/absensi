@@ -282,4 +282,22 @@ export const announcementsAPI = {
     delete: (id) => request(`/announcements/${id}`, { method: 'DELETE' }),
 };
 
-export default { authAPI, attendanceAPI, locationsAPI, reportsAPI, leavesAPI, faceAPI, announcementsAPI };
+// Settings API
+export const settingsAPI = {
+    getAll: () => request('/settings'),
+    updateLogo: (formData) => request('/settings/logo', {
+        method: 'POST',
+        body: formData, // FormData for file upload
+    }),
+};
+
+export default {
+    authAPI,
+    attendanceAPI,
+    locationsAPI,
+    reportsAPI,
+    leavesAPI,
+    faceAPI,
+    announcementsAPI,
+    settingsAPI
+};

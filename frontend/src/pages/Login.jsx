@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 export default function Login() {
     const [employeeId, setEmployeeId] = useState('');
@@ -9,6 +10,7 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
 
     const { login } = useAuth();
+    const { settings } = useSettings();
     const navigate = useNavigate();
 
     async function handleSubmit(e) {
@@ -31,7 +33,7 @@ export default function Login() {
             <div className="login-container">
                 <div className="login-card">
                     <div className="login-logo">
-                        <img src="/logo.png" alt="Logo" style={{ width: '80px', height: 'auto', marginBottom: '1rem' }} />
+                        <img src={settings.app_logo} alt="Logo" style={{ width: '80px', height: 'auto', marginBottom: '1rem' }} />
                         <h1>Absensi Karyawan</h1>
                         <p>Silakan login untuk melanjutkan</p>
                     </div>
