@@ -52,14 +52,20 @@ router.get('/', async (req, res) => {
 
 // Update logo (Admin only)
 router.post('/logo', authenticateToken, isAdmin, upload.single('logo'), async (req, res) => {
-    res.json({
-        message: 'Logo berhasil diperbarui',
-        logoPath: logoPath
-    });
-} catch (error) {
-    console.error('Update logo error:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan server' });
-}
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Tidak ada file yang diunggah' });
+        }
+        const logoPath = `/uploads/logo/${req.file.filename}`;
+        await pool.query('UPDATE settings SET value = $1 WHERE key = $2', [logoPath, 'app_logo']);
+        res.json({
+            message: 'Logo berhasil diperbarui',
+            logoPath: logoPath
+        });
+    } catch (error) {
+        console.error('Update logo error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
 });
 
 module.exports = router;
