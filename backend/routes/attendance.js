@@ -108,6 +108,13 @@ router.post('/check-in', authenticateToken, upload.single('photo'), async (req, 
             }
         }
 
+        if (!isValid) {
+            return res.status(400).json({
+                error: 'Lokasi Anda berada di luar jangkauan lokasi absen',
+                distance: Math.round(distance)
+            });
+        }
+
         const photoPath = `/uploads/attendance/${req.file.filename}`;
 
         const result = await pool.query(
@@ -130,9 +137,7 @@ router.post('/check-in', authenticateToken, upload.single('photo'), async (req, 
         res.status(201).json({
             ...result.rows[0],
             location_name: nearestLocation?.name || null,
-            message: isValid
-                ? 'Check-in berhasil'
-                : `Check-in berhasil, tetapi Anda berada ${Math.round(distance)}m dari lokasi kantor`
+            message: 'Check-in berhasil'
         });
     } catch (error) {
         console.error('Check-in error:', error);
@@ -222,6 +227,13 @@ router.post('/check-out', authenticateToken, upload.single('photo'), async (req,
             }
         }
 
+        if (!isValid) {
+            return res.status(400).json({
+                error: 'Lokasi Anda berada di luar jangkauan lokasi absen',
+                distance: Math.round(distance)
+            });
+        }
+
         const photoPath = `/uploads/attendance/${req.file.filename}`;
 
         const result = await pool.query(
@@ -244,9 +256,7 @@ router.post('/check-out', authenticateToken, upload.single('photo'), async (req,
         res.status(201).json({
             ...result.rows[0],
             location_name: nearestLocation?.name || null,
-            message: isValid
-                ? 'Check-out berhasil'
-                : `Check-out berhasil, tetapi Anda berada ${Math.round(distance)}m dari lokasi kantor`
+            message: 'Check-out berhasil'
         });
     } catch (error) {
         console.error('Check-out error:', error);

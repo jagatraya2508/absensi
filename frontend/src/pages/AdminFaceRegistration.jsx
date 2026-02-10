@@ -67,15 +67,20 @@ export default function AdminFaceRegistration() {
     }
 
     async function handleOpenCamera(user) {
+        console.log('Opening camera for user:', user);
         setSelectedUser(user);
         setShowCamera(true);
         setError('');
         setSuccess('');
 
+        // Scroll to top so admin can see the camera card
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
         // Wait for video element to mount
         setTimeout(() => {
+            console.log('Starting camera...');
             startCamera();
-        }, 100);
+        }, 300); // Increased delay to ensure mount
     }
 
     function handleCloseCamera() {
@@ -285,9 +290,9 @@ export default function AdminFaceRegistration() {
                                                     className="btn btn-primary"
                                                     style={{ padding: '0.25rem 0.75rem', fontSize: '0.85rem' }}
                                                     onClick={() => handleOpenCamera(user)}
-                                                    disabled={showCamera}
+                                                    disabled={showCamera || modelsLoading}
                                                 >
-                                                    📸 {user.has_face ? 'Perbarui' : 'Daftarkan'}
+                                                    {modelsLoading ? '⌛' : '📸'} {user.has_face ? 'Perbarui' : 'Daftarkan'}
                                                 </button>
                                                 {user.has_face && (
                                                     <button

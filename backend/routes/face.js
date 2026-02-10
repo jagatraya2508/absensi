@@ -9,6 +9,8 @@ router.post('/register/:userId', authenticateToken, isAdmin, async (req, res) =>
         const { userId } = req.params;
         const { face_descriptor } = req.body;
 
+        console.log(`Registering face for user ${userId}, descriptor length: ${face_descriptor?.length}`);
+
         if (!face_descriptor || !Array.isArray(face_descriptor)) {
             return res.status(400).json({ error: 'Face descriptor tidak valid' });
         }
@@ -44,6 +46,8 @@ router.post('/register-self', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const { face_descriptor } = req.body;
+
+        console.log(`Self-registering face for user ${userId}, descriptor length: ${face_descriptor?.length}`);
 
         if (!face_descriptor || !Array.isArray(face_descriptor)) {
             return res.status(400).json({ error: 'Face descriptor tidak valid' });

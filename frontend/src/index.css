@@ -548,6 +548,12 @@ body {
   background-position: right 1rem center;
   background-size: 1rem;
   padding-right: 2.5rem;
+  background-color: rgba(30, 41, 59, 1); /* Solid dark background for select */
+}
+
+.form-select option {
+  background-color: #1e293b;
+  color: white;
 }
 
 /* ========================================
