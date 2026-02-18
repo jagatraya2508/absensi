@@ -111,7 +111,14 @@ export default function OffDayManager({ onClose, isPage = false }) {
                                 <button
                                     className="btn btn-danger btn-sm"
                                     style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}
-                                    onClick={() => handleDeleteOffDate(day.off_date.split('T')[0])}
+                                    onClick={() => {
+                                        const dateObj = new Date(day.off_date);
+                                        // Format manually to YYYY-MM-DD using local time
+                                        const year = dateObj.getFullYear();
+                                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                        const d = String(dateObj.getDate()).padStart(2, '0');
+                                        handleDeleteOffDate(`${year}-${month}-${d}`);
+                                    }}
                                 >
                                     Hapus
                                 </button>
