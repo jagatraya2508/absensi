@@ -20,6 +20,17 @@ echo "[2/4] Installing dependencies..."
 # Menggunakan script install:all dari package.json
 npm run install:all
 
+# 2b. Run Database Migrations
+echo "[2b] Running Database Migrations..."
+cd backend
+echo "Running migration: migrate_off_day.js"
+node migrate_off_day.js
+echo "Running migration: migrate_off_days_table.js"
+node migrate_off_days_table.js
+echo "Running migration: migrate_change_off.js"
+node migrate_change_off.js
+cd ..
+
 # 3. Build Frontend
 echo "[3/4] Building Frontend..."
 cd frontend
