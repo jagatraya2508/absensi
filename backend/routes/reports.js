@@ -33,7 +33,8 @@ router.get('/daily', authenticateToken, isAdmin, async (req, res) => {
         lr.id as leave_id,
         lr.type as leave_type,
         lr.status as leave_status,
-        lr.reason as leave_reason
+        lr.reason as leave_reason,
+        CASE WHEN uod.id IS NOT NULL THEN true ELSE false END as is_off_day
       FROM users u
       LEFT JOIN attendance_records ci ON u.id = ci.user_id 
         AND ci.type = 'check_in' 
@@ -45,6 +46,8 @@ router.get('/daily', authenticateToken, isAdmin, async (req, res) => {
       LEFT JOIN leave_requests lr ON u.id = lr.user_id
         AND lr.status = 'approved'
         AND $1::date BETWEEN lr.start_date AND lr.end_date
+      LEFT JOIN user_off_days uod ON u.id = uod.user_id
+        AND uod.off_date = $1::date
       WHERE u.role = 'employee'
       ORDER BY u.name`,
             [targetDate]
@@ -55,16 +58,18 @@ router.get('/daily', authenticateToken, isAdmin, async (req, res) => {
         const onLeave = records.filter(r => r.leave_type === 'leave');
         const onSick = records.filter(r => r.leave_type === 'sick');
         const onLate = records.filter(r => r.leave_type === 'late');
+        const onOff = records.filter(r => r.is_off_day);
 
         const summary = {
             date: targetDate,
             total_employees: records.length,
             present: records.filter(r => r.check_in_time).length,
-            absent: records.filter(r => !r.check_in_time && !r.leave_type).length,
+            absent: records.filter(r => !r.check_in_time && !r.leave_type && !r.is_off_day).length,
             completed: records.filter(r => r.check_in_time && r.check_out_time).length,
             on_leave: onLeave.length,
             on_sick: onSick.length,
-            on_late: onLate.length
+            on_late: onLate.length,
+            on_off: onOff.length
         };
 
         res.json({
@@ -175,7 +180,8 @@ router.get('/export/daily/pdf', authenticateToken, isAdmin, async (req, res) => 
         ci.recorded_at as check_in_time,
         ci.is_valid as check_in_valid,
         co.recorded_at as check_out_time,
-        al.name as location_name
+        al.name as location_name,
+        CASE WHEN uod.id IS NOT NULL THEN true ELSE false END as is_off_day
       FROM users u
       LEFT JOIN attendance_records ci ON u.id = ci.user_id 
         AND ci.type = 'check_in' 
@@ -184,6 +190,8 @@ router.get('/export/daily/pdf', authenticateToken, isAdmin, async (req, res) => 
         AND co.type = 'check_out' 
         AND DATE(co.recorded_at) = $1
       LEFT JOIN attendance_locations al ON COALESCE(ci.location_id, co.location_id) = al.id
+      LEFT JOIN user_off_days uod ON u.id = uod.user_id
+        AND uod.off_date = $1::date
       WHERE u.role = 'employee'
       ORDER BY u.name`,
             [targetDate]
@@ -204,11 +212,13 @@ router.get('/export/daily/pdf', authenticateToken, isAdmin, async (req, res) => 
 
         // Summary
         const present = result.rows.filter(r => r.check_in_time).length;
-        const absent = result.rows.filter(r => !r.check_in_time).length;
+        const offDay = result.rows.filter(r => r.is_off_day).length;
+        const absent = result.rows.filter(r => !r.check_in_time && !r.is_off_day).length;
 
         doc.fontSize(11);
         doc.text(`Total Karyawan: ${result.rows.length}`);
         doc.text(`Hadir: ${present}`);
+        doc.text(`OFF: ${offDay}`);
         doc.text(`Tidak Hadir: ${absent}`);
         doc.moveDown(2);
 
@@ -235,11 +245,13 @@ router.get('/export/daily/pdf', authenticateToken, isAdmin, async (req, res) => 
                 yPosition = 50;
             }
 
+            const status = row.is_off_day ? 'OFF' : (row.check_in_time ? (row.check_in_valid ? 'Valid' : 'Diluar Radius') : 'Tidak Hadir');
+
             doc.text(String(index + 1), col1, yPosition);
             doc.text(row.name || '-', col2, yPosition, { width: 120 });
-            doc.text(row.check_in_time ? formatTimeID(row.check_in_time) : '-', col3, yPosition);
-            doc.text(row.check_out_time ? formatTimeID(row.check_out_time) : '-', col4, yPosition);
-            doc.text(row.check_in_time ? (row.check_in_valid ? 'Valid' : 'Diluar Radius') : 'Tidak Hadir', col5, yPosition);
+            doc.text(row.is_off_day ? 'OFF' : (row.check_in_time ? formatTimeID(row.check_in_time) : '-'), col3, yPosition);
+            doc.text(row.is_off_day ? 'OFF' : (row.check_out_time ? formatTimeID(row.check_out_time) : '-'), col4, yPosition);
+            doc.text(status, col5, yPosition);
 
             yPosition += 20;
         });
@@ -268,7 +280,8 @@ router.get('/export/daily/excel', authenticateToken, isAdmin, async (req, res) =
         ci.is_valid as check_in_valid,
         ci.distance_meters as check_in_distance,
         co.recorded_at as check_out_time,
-        al.name as location_name
+        al.name as location_name,
+        CASE WHEN uod.id IS NOT NULL THEN true ELSE false END as is_off_day
       FROM users u
       LEFT JOIN attendance_records ci ON u.id = ci.user_id 
         AND ci.type = 'check_in' 
@@ -277,6 +290,8 @@ router.get('/export/daily/excel', authenticateToken, isAdmin, async (req, res) =
         AND co.type = 'check_out' 
         AND DATE(co.recorded_at) = $1
       LEFT JOIN attendance_locations al ON COALESCE(ci.location_id, co.location_id) = al.id
+      LEFT JOIN user_off_days uod ON u.id = uod.user_id
+        AND uod.off_date = $1::date
       WHERE u.role = 'employee'
       ORDER BY u.name`,
             [targetDate]
@@ -307,14 +322,15 @@ router.get('/export/daily/excel', authenticateToken, isAdmin, async (req, res) =
 
         // Data rows
         result.rows.forEach((row, index) => {
+            const status = row.is_off_day ? 'OFF' : (row.check_in_time ? (row.check_in_valid ? 'Valid' : 'Diluar Radius') : 'Tidak Hadir');
             worksheet.addRow([
                 index + 1,
                 row.employee_id || '-',
                 row.name || '-',
-                row.check_in_time ? formatTimeID(row.check_in_time) : '-',
-                row.check_out_time ? formatTimeID(row.check_out_time) : '-',
+                row.is_off_day ? 'OFF' : (row.check_in_time ? formatTimeID(row.check_in_time) : '-'),
+                row.is_off_day ? 'OFF' : (row.check_out_time ? formatTimeID(row.check_out_time) : '-'),
                 row.location_name || '-',
-                row.check_in_time ? (row.check_in_valid ? 'Valid' : 'Diluar Radius') : 'Tidak Hadir'
+                status
             ]);
         });
 

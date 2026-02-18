@@ -15,6 +15,7 @@ import AdminLeaves from './pages/AdminLeaves';
 import AdminAnnouncements from './pages/AdminAnnouncements';
 import AdminSettings from './pages/AdminSettings';
 import ChangePassword from './pages/ChangePassword';
+import OffDays from './pages/OffDays';
 
 function ProtectedRoute({ children, adminOnly = false }) {
     const { user, loading } = useAuth();
@@ -106,6 +107,17 @@ function AppRoutes() {
                     <ProtectedRoute>
                         <AppLayout>
                             <ChangePassword />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/off-days"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <OffDays />
                         </AppLayout>
                     </ProtectedRoute>
                 }

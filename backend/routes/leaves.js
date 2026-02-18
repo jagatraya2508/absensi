@@ -38,7 +38,8 @@ const upload = multer({
 const leaveTypes = {
     late: 'Izin Terlambat',
     sick: 'Izin Sakit',
-    leave: 'Cuti'
+    leave: 'Cuti',
+    change_off: 'Tukar Libur'
 };
 
 // Annual leave quota (days per year)
@@ -74,11 +75,11 @@ async function getUsedLeaveDays(userId, year) {
 // Create new leave request (Employee)
 router.post('/', authenticateToken, upload.single('attachment'), async (req, res) => {
     try {
-        const { type, start_date, end_date, reason } = req.body;
+        const { type, start_date, end_date, reason, replacement_date } = req.body;
         const userId = req.user.id;
 
         // Validate type
-        if (!['late', 'sick', 'leave'].includes(type)) {
+        if (!['late', 'sick', 'leave', 'change_off'].includes(type)) {
             return res.status(400).json({ error: 'Jenis izin tidak valid' });
         }
 
@@ -89,6 +90,11 @@ router.post('/', authenticateToken, upload.single('attachment'), async (req, res
 
         if (new Date(start_date) > new Date(end_date)) {
             return res.status(400).json({ error: 'Tanggal mulai tidak boleh lebih dari tanggal selesai' });
+        }
+
+        // Validate change_off specific requirements
+        if (type === 'change_off' && !replacement_date) {
+            return res.status(400).json({ error: 'Tanggal pengganti harus diisi untuk tukar libur' });
         }
 
         // Validate reason
@@ -115,10 +121,10 @@ router.post('/', authenticateToken, upload.single('attachment'), async (req, res
         const attachmentPath = req.file ? `/uploads/leave/${req.file.filename}` : null;
 
         const result = await pool.query(
-            `INSERT INTO leave_requests (user_id, type, start_date, end_date, reason, attachment_path) 
-             VALUES ($1, $2, $3, $4, $5, $6) 
+            `INSERT INTO leave_requests (user_id, type, start_date, end_date, reason, attachment_path, replacement_date) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) 
              RETURNING *`,
-            [userId, type, start_date, end_date, reason.trim(), attachmentPath]
+            [userId, type, start_date, end_date, reason.trim(), attachmentPath, replacement_date || null]
         );
 
         res.status(201).json({

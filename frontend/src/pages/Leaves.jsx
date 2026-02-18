@@ -13,13 +13,15 @@ export default function Leaves() {
     const [type, setType] = useState('late');
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [replacementDate, setReplacementDate] = useState('');
     const [reason, setReason] = useState('');
     const [attachment, setAttachment] = useState(null);
 
     const leaveTypes = {
         late: { label: 'Izin Terlambat', icon: '⏰', color: 'warning' },
         sick: { label: 'Izin Sakit', icon: '🏥', color: 'danger' },
-        leave: { label: 'Cuti', icon: '🏖️', color: 'primary' }
+        leave: { label: 'Cuti', icon: '🏖️', color: 'primary' },
+        change_off: { label: 'Tukar Libur', icon: '🔄', color: 'info' }
     };
 
     const statusLabels = {
@@ -63,6 +65,9 @@ export default function Leaves() {
             formData.append('type', type);
             formData.append('start_date', startDate);
             formData.append('end_date', endDate);
+            if (type === 'change_off' && replacementDate) {
+                formData.append('replacement_date', replacementDate);
+            }
             formData.append('reason', reason);
             if (attachment) {
                 formData.append('attachment', attachment);
@@ -74,6 +79,7 @@ export default function Leaves() {
             setType('late');
             setStartDate(new Date().toISOString().split('T')[0]);
             setEndDate(new Date().toISOString().split('T')[0]);
+            setReplacementDate('');
             setReason('');
             setAttachment(null);
             setShowForm(false);
@@ -167,6 +173,17 @@ export default function Leaves() {
                         </p>
                     </div>
                 </button>
+                <button
+                    className="card status-card"
+                    onClick={() => { setType('change_off'); setShowForm(true); }}
+                    style={{ cursor: 'pointer', border: 'none', textAlign: 'left' }}
+                >
+                    <div className="status-card-icon info">🔄</div>
+                    <div className="status-card-content">
+                        <h3>Tukar Libur</h3>
+                        <p style={{ fontSize: '0.85rem' }}>Ganti hari libur/off</p>
+                    </div>
+                </button>
             </div>
 
             {/* Form Modal */}
@@ -209,6 +226,22 @@ export default function Leaves() {
                                 />
                             </div>
                         </div>
+
+                        {type === 'change_off' && (
+                            <div className="form-group">
+                                <label className="form-label">Tanggal Pengganti (Masuk Kerja)</label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    value={replacementDate}
+                                    onChange={(e) => setReplacementDate(e.target.value)}
+                                    required
+                                />
+                                <small style={{ color: 'var(--gray-400)', fontSize: '0.75rem' }}>
+                                    Pilih tanggal di mana Anda bersedia masuk sebagai pengganti libur ini.
+                                </small>
+                            </div>
+                        )}
 
                         <div className="form-group">
                             <label className="form-label">Alasan</label>

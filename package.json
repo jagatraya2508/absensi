@@ -4,11 +4,14 @@
     "description": "Aplikasi Absensi Karyawan dengan foto selfie dan GPS tracking",
     "scripts": {
         "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
-        "backend": "cd backend && node server.js",
+        "backend": "cd backend && npm run dev",
         "frontend": "cd frontend && npm run dev",
         "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"
+    },
+    "dependencies": {
+        "dotenv": "^17.3.1"
     }
 }

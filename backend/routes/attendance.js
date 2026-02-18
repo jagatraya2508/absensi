@@ -281,11 +281,19 @@ router.get('/today', authenticateToken, async (req, res) => {
         const checkIn = result.rows.find(r => r.type === 'check_in');
         const checkOut = result.rows.find(r => r.type === 'check_out');
 
+        // Check if today is an off day
+        const offDayResult = await pool.query(
+            'SELECT id FROM user_off_days WHERE user_id = $1 AND off_date = $2',
+            [req.user.id, today]
+        );
+        const isOffDay = offDayResult.rows.length > 0;
+
         res.json({
             checked_in: !!checkIn,
             checked_out: !!checkOut,
             check_in: checkIn || null,
-            check_out: checkOut || null
+            check_out: checkOut || null,
+            is_off_day: isOffDay
         });
     } catch (error) {
         console.error('Get today attendance error:', error);
@@ -337,7 +345,54 @@ router.get('/history', authenticateToken, async (req, res) => {
         params.push(parseInt(limit));
 
         const result = await pool.query(query, params);
-        res.json(result.rows);
+
+        // Also fetch off days for the relevant user(s) and date range
+        const targetUserId = !isAdmin ? req.user.id : (user_id && user_id !== 'all' ? user_id : null);
+        let offDayRecords = [];
+
+        if (targetUserId) {
+            const offParams = [targetUserId];
+            let offQuery = `
+              SELECT uod.off_date, u.name as user_name, u.employee_id, u.id as user_id
+              FROM user_off_days uod
+              JOIN users u ON uod.user_id = u.id
+              WHERE uod.user_id = $1
+            `;
+            if (start_date) {
+                offParams.push(start_date);
+                offQuery += ` AND uod.off_date >= $${offParams.length}`;
+            }
+            if (end_date) {
+                offParams.push(end_date);
+                offQuery += ` AND uod.off_date <= $${offParams.length}`;
+            }
+            offQuery += ` ORDER BY uod.off_date DESC`;
+
+            const offResult = await pool.query(offQuery, offParams);
+            offDayRecords = offResult.rows.map(row => ({
+                id: `off_${row.user_id}_${row.off_date}`,
+                user_id: row.user_id,
+                type: 'off_day',
+                recorded_at: row.off_date,
+                user_name: row.user_name,
+                employee_id: row.employee_id,
+                is_off_day: true,
+                photo_path: null,
+                location_name: null,
+                latitude: null,
+                longitude: null,
+                distance_meters: null,
+                is_valid: null,
+                notes: 'Hari Libur'
+            }));
+        }
+
+        // Merge attendance records with off day records
+        const allRecords = [...result.rows, ...offDayRecords];
+        // Sort by date descending
+        allRecords.sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at));
+
+        res.json(allRecords);
     } catch (error) {
         console.error('Get attendance history error:', error);
         res.status(500).json({ error: 'Terjadi kesalahan server' });

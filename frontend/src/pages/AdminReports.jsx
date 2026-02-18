@@ -172,6 +172,15 @@ export default function AdminReports() {
                             <p>{report.summary.completed}</p>
                         </div>
                     </div>
+                    {report.summary.on_off > 0 && (
+                        <div className="card status-card">
+                            <div className="status-card-icon primary">🏖️</div>
+                            <div className="status-card-content">
+                                <h3>OFF</h3>
+                                <p>{report.summary.on_off}</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -261,7 +270,9 @@ export default function AdminReports() {
                                         </td>
                                         <td>{record.location_name || '-'}</td>
                                         <td>
-                                            {record.check_in_time && record.check_out_time ? (
+                                            {record.is_off_day ? (
+                                                <span className="badge badge-primary">🏖️ OFF</span>
+                                            ) : record.check_in_time && record.check_out_time ? (
                                                 <span className="badge badge-success">✅ Lengkap</span>
                                             ) : record.check_in_time ? (
                                                 record.leave_type === 'late' ? (

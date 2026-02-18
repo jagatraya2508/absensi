@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { attendanceAPI, announcementsAPI } from '../utils/api';
+import { attendanceAPI, announcementsAPI, scheduleAPI } from '../utils/api';
 import ImageModal from '../components/ImageModal';
+import OffDayManager from '../components/OffDayManager';
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -15,6 +16,9 @@ export default function Dashboard() {
 
     // Image Modal State
     const [selectedImg, setSelectedImg] = useState({ src: '', caption: '', isOpen: false });
+
+    // Off Day Modal State
+    const [showOffDayModal, setShowOffDayModal] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -135,22 +139,22 @@ export default function Dashboard() {
             {/* Status Absensi Hari Ini */}
             <div className="grid grid-2 mb-4">
                 <div className="card status-card">
-                    <div className={`status-card-icon ${todayStatus?.checked_in ? 'success' : 'warning'}`}>
-                        {todayStatus?.checked_in ? '✓' : '○'}
+                    <div className={`status-card-icon ${todayStatus?.is_off_day ? 'primary' : todayStatus?.checked_in ? 'success' : 'warning'}`}>
+                        {todayStatus?.is_off_day ? '🏖️' : todayStatus?.checked_in ? '✓' : '○'}
                     </div>
                     <div className="status-card-content">
                         <h3>Check-in</h3>
-                        <p>{todayStatus?.check_in ? formatTime(todayStatus.check_in.recorded_at) : 'Belum'}</p>
+                        <p>{todayStatus?.is_off_day ? 'OFF' : todayStatus?.check_in ? formatTime(todayStatus.check_in.recorded_at) : 'Belum'}</p>
                     </div>
                 </div>
 
                 <div className="card status-card">
-                    <div className={`status-card-icon ${todayStatus?.checked_out ? 'success' : 'warning'}`}>
-                        {todayStatus?.checked_out ? '✓' : '○'}
+                    <div className={`status-card-icon ${todayStatus?.is_off_day ? 'primary' : todayStatus?.checked_out ? 'success' : 'warning'}`}>
+                        {todayStatus?.is_off_day ? '🏖️' : todayStatus?.checked_out ? '✓' : '○'}
                     </div>
                     <div className="status-card-content">
                         <h3>Check-out</h3>
-                        <p>{todayStatus?.check_out ? formatTime(todayStatus.check_out.recorded_at) : 'Belum'}</p>
+                        <p>{todayStatus?.is_off_day ? 'OFF' : todayStatus?.check_out ? formatTime(todayStatus.check_out.recorded_at) : 'Belum'}</p>
                     </div>
                 </div>
             </div>
@@ -160,35 +164,59 @@ export default function Dashboard() {
             <div className="mb-4">
                 {/* Attendance Buttons - Compact & Side by Side */}
                 <div className="attendance-action-grid gap-3 mb-4">
-                    <Link
-                        to="/attendance?type=check-in"
-                        className={`btn-attendance-compact ${todayStatus?.checked_in ? 'disabled' : 'primary'}`}
-                        style={{ pointerEvents: todayStatus?.checked_in ? 'none' : 'auto' }}
-                    >
-                        <div className="icon-wrapper">
-                            <span className="icon">📥</span>
+                    {todayStatus?.is_off_day ? (
+                        <div
+                            style={{
+                                gridColumn: '1 / -1',
+                                background: 'rgba(99, 102, 241, 0.15)',
+                                border: '1px solid rgba(99, 102, 241, 0.4)',
+                                borderRadius: 'var(--radius-lg)',
+                                padding: '1.25rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.75rem'
+                            }}
+                        >
+                            <span style={{ fontSize: '1.8rem' }}>🏖️</span>
+                            <div>
+                                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary-300)' }}>Hari Ini Libur</div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--gray-400)' }}>Absensi tidak diperlukan hari ini</div>
+                            </div>
                         </div>
-                        <div className="text-wrapper">
-                            <span className="label">Check-in</span>
-                            <span className="sub-label">{todayStatus?.checked_in ? 'Sudah Absen' : 'Masuk Kerja'}</span>
-                        </div>
-                        {todayStatus?.checked_in && <div className="status-badge">✓</div>}
-                    </Link>
+                    ) : (
+                        <>
+                            <Link
+                                to="/attendance?type=check-in"
+                                className={`btn-attendance-compact ${todayStatus?.checked_in ? 'disabled' : 'primary'}`}
+                                style={{ pointerEvents: todayStatus?.checked_in ? 'none' : 'auto' }}
+                            >
+                                <div className="icon-wrapper">
+                                    <span className="icon">📥</span>
+                                </div>
+                                <div className="text-wrapper">
+                                    <span className="label">Check-in</span>
+                                    <span className="sub-label">{todayStatus?.checked_in ? 'Sudah Absen' : 'Masuk Kerja'}</span>
+                                </div>
+                                {todayStatus?.checked_in && <div className="status-badge">✓</div>}
+                            </Link>
 
-                    <Link
-                        to="/attendance?type=check-out"
-                        className={`btn-attendance-compact ${(!todayStatus?.checked_in || todayStatus?.checked_out) ? 'disabled' : 'danger'}`}
-                        style={{ pointerEvents: (!todayStatus?.checked_in || todayStatus?.checked_out) ? 'none' : 'auto' }}
-                    >
-                        <div className="icon-wrapper">
-                            <span className="icon">📤</span>
-                        </div>
-                        <div className="text-wrapper">
-                            <span className="label">Check-out</span>
-                            <span className="sub-label">{todayStatus?.checked_out ? 'Sudah Absen' : 'Pulang Kerja'}</span>
-                        </div>
-                        {todayStatus?.checked_out && <div className="status-badge">✓</div>}
-                    </Link>
+                            <Link
+                                to="/attendance?type=check-out"
+                                className={`btn-attendance-compact ${(!todayStatus?.checked_in || todayStatus?.checked_out) ? 'disabled' : 'danger'}`}
+                                style={{ pointerEvents: (!todayStatus?.checked_in || todayStatus?.checked_out) ? 'none' : 'auto' }}
+                            >
+                                <div className="icon-wrapper">
+                                    <span className="icon">📤</span>
+                                </div>
+                                <div className="text-wrapper">
+                                    <span className="label">Check-out</span>
+                                    <span className="sub-label">{todayStatus?.checked_out ? 'Sudah Absen' : 'Pulang Kerja'}</span>
+                                </div>
+                                {todayStatus?.checked_out && <div className="status-badge">✓</div>}
+                            </Link>
+                        </>
+                    )}
                 </div>
 
                 {/* User Menus Grid */}
@@ -205,6 +233,15 @@ export default function Dashboard() {
                         <div className="menu-icon bg-purple-100 text-purple-600">🔑</div>
                         <span className="menu-label">Ubah Password</span>
                     </Link>
+
+                    {/* Off Day Setting */}
+                    <div className="menu-item" style={{ cursor: 'pointer' }} onClick={() => setShowOffDayModal(true)}>
+                        <div className="menu-icon bg-red-100 text-red-600">📅</div>
+                        <span className="menu-label">
+                            Atur Libur
+                        </span>
+                    </div>
+
                     {user?.role === 'admin' && (
                         <>
                             <Link to="/admin/announcements" className="menu-item">
@@ -235,6 +272,35 @@ export default function Dashboard() {
                     )}
                 </div>
             </div>
+
+            {/* Off Day Modal */}
+            {showOffDayModal && (
+                <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', paddingTop: '2rem', overflowY: 'auto' }}>
+                    <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', minHeight: '50vh', display: 'flex', flexDirection: 'column', borderRadius: '1.25rem', margin: 0 }}>
+                        {/* Header */}
+                        <div className="card-header" style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                            <h2 className="card-title" style={{ fontSize: '1.3rem', margin: 0 }}>📅 Atur Tanggal Libur</h2>
+                            <button className="btn btn-outline" style={{ fontSize: '1.2rem', padding: '0.5rem 0.75rem' }} onClick={() => setShowOffDayModal(false)}>✕</button>
+                        </div>
+
+                        {/* Content using Shared Component */}
+                        <div style={{ padding: '1.25rem 1.5rem', flex: 1, overflowY: 'auto' }}>
+                            <OffDayManager onClose={() => setShowOffDayModal(false)} />
+                        </div>
+
+                        {/* Close Button */}
+                        <div style={{ padding: '1rem 1.5rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                            <button
+                                className="btn btn-outline"
+                                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', fontWeight: 600, borderRadius: 'var(--radius)' }}
+                                onClick={() => setShowOffDayModal(false)}
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Detail Absensi Hari Ini */}
             {(todayStatus?.check_in || todayStatus?.check_out) && (

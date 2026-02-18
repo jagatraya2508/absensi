@@ -2,8 +2,18 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('../db');
 const { JWT_SECRET, authenticateToken, isAdmin } = require('../middleware/auth');
+
+function logError(error) {
+    const logPath = path.join(__dirname, '../error.log');
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] AUTH ERROR: ${error.stack || error}\n`;
+    fs.appendFileSync(logPath, logMessage);
+}
+
 
 // Login
 router.post('/login', async (req, res) => {
@@ -43,7 +53,8 @@ router.post('/login', async (req, res) => {
                 employee_id: user.employee_id,
                 name: user.name,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                off_day: user.off_day
             }
         });
     } catch (error) {
@@ -52,10 +63,33 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Update Profile (Self)
+router.put('/profile', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { off_day } = req.body;
+
+        const validDays = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+        if (off_day && !validDays.includes(off_day)) {
+            return res.status(400).json({ error: 'Hari libur tidak valid' });
+        }
+
+        const result = await pool.query(
+            'UPDATE users SET off_day = $1 WHERE id = $2 RETURNING id, employee_id, name, email, role, off_day',
+            [off_day, userId]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
 // Register (Admin only)
 router.post('/register', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const { employee_id, name, email, password, role } = req.body;
+        const { employee_id, name, email, password, role, off_day } = req.body;
 
         if (!employee_id || !name || !password) {
             return res.status(400).json({ error: 'Employee ID, nama, dan password harus diisi' });
@@ -64,10 +98,10 @@ router.post('/register', authenticateToken, isAdmin, async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            `INSERT INTO users (employee_id, name, email, password, role) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING id, employee_id, name, email, role`,
-            [employee_id, name, email || null, hashedPassword, role || 'employee']
+            `INSERT INTO users (employee_id, name, email, password, role, off_day) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING id, employee_id, name, email, role, off_day`,
+            [employee_id, name, email || null, hashedPassword, role || 'employee', off_day || 'Minggu']
         );
 
         res.status(201).json(result.rows[0]);
@@ -84,7 +118,7 @@ router.post('/register', authenticateToken, isAdmin, async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT id, employee_id, name, email, role, created_at FROM users WHERE id = $1',
+            'SELECT id, employee_id, name, email, role, created_at, off_day FROM users WHERE id = $1',
             [req.user.id]
         );
 

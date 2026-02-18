@@ -23,15 +23,32 @@ async function request(endpoint, options = {}) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
+    console.log(`Requesting: ${API_BASE}${endpoint}`);
     const response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
         headers,
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+
+    // Read text buffer once
+    const text = await response.text();
+
+    if (contentType && contentType.includes('text/html')) {
+        console.error('Received HTML response:', text.substring(0, 100));
+        throw new Error(`Server Error (Received HTML instead of JSON from ${API_BASE}${endpoint})`);
+    }
+
+    let data;
+    try {
+        data = text ? JSON.parse(text) : {};
+    } catch (e) {
+        console.error('Failed to parse JSON:', text.substring(0, 100));
+        throw new Error('Server Error (Invalid JSON response)');
+    }
 
     if (!response.ok) {
-        throw new Error(data.error || 'Terjadi kesalahan');
+        throw new Error(data.error || `Request failed with status ${response.status}`);
     }
 
     return data;
@@ -76,6 +93,13 @@ export const authAPI = {
         request(`/auth/reset-password/${userId}`, {
             method: 'PUT',
             body: JSON.stringify({ new_password: newPassword }),
+        }),
+
+    // Update own profile (off_day)
+    updateProfile: (data) =>
+        request('/auth/profile', {
+            method: 'PUT',
+            body: JSON.stringify(data),
         }),
 };
 
@@ -291,6 +315,18 @@ export const settingsAPI = {
     }),
 };
 
+// Schedule API
+export const scheduleAPI = {
+    getOffDays: () => request('/schedule/off-days'),
+    addOffDays: (dates) => request('/schedule/off-days', {
+        method: 'POST',
+        body: JSON.stringify({ off_dates: dates }),
+    }),
+    deleteOffDay: (date) => request(`/schedule/off-days/${date}`, {
+        method: 'DELETE',
+    }),
+};
+
 export default {
     authAPI,
     attendanceAPI,
@@ -299,5 +335,6 @@ export default {
     leavesAPI,
     faceAPI,
     announcementsAPI,
-    settingsAPI
+    settingsAPI,
+    scheduleAPI
 };

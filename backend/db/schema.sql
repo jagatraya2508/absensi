@@ -83,3 +83,16 @@ CREATE TABLE IF NOT EXISTS announcements (
 -- Index untuk announcements
 CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(is_active);
 CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);
+
+-- Tabel User Off Days (Hari Libur Karyawan)
+CREATE TABLE IF NOT EXISTS user_off_days (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    off_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, off_date)
+);
+
+-- Index untuk user_off_days
+CREATE INDEX IF NOT EXISTS idx_off_days_user_id ON user_off_days(user_id);
+CREATE INDEX IF NOT EXISTS idx_off_days_date ON user_off_days(off_date);
