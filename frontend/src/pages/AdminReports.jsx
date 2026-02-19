@@ -6,13 +6,15 @@ export default function AdminReports() {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [year, setYear] = useState(new Date().getFullYear());
     const [month, setMonth] = useState(new Date().getMonth() + 1);
+    const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]);
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         fetchReport();
-    }, [reportType, date, year, month]);
+    }, [reportType, date, year, month, startDate, endDate]);
 
     async function fetchReport() {
         setLoading(true);
@@ -20,8 +22,11 @@ export default function AdminReports() {
             if (reportType === 'daily') {
                 const data = await reportsAPI.getDaily(date);
                 setReport(data);
-            } else {
+            } else if (reportType === 'monthly') {
                 const data = await reportsAPI.getMonthly(year, month);
+                setReport(data);
+            } else if (reportType === 'off') {
+                const data = await reportsAPI.getOff(startDate, endDate);
                 setReport(data);
             }
         } catch (error) {
@@ -36,8 +41,10 @@ export default function AdminReports() {
         try {
             if (reportType === 'daily') {
                 await reportsAPI.exportDailyPDF(date);
-            } else {
+            } else if (reportType === 'monthly') {
                 await reportsAPI.exportMonthlyPDF(year, month);
+            } else if (reportType === 'off') {
+                await reportsAPI.exportOffPDF(startDate, endDate);
             }
         } catch (error) {
             console.error('Export PDF failed:', error);
@@ -52,8 +59,10 @@ export default function AdminReports() {
         try {
             if (reportType === 'daily') {
                 await reportsAPI.exportDailyExcel(date);
-            } else {
+            } else if (reportType === 'monthly') {
                 await reportsAPI.exportMonthlyExcel(year, month);
+            } else if (reportType === 'off') {
+                await reportsAPI.exportOffExcel(startDate, endDate);
             }
         } catch (error) {
             console.error('Export Excel failed:', error);
@@ -96,6 +105,7 @@ export default function AdminReports() {
                         >
                             <option value="daily">Harian</option>
                             <option value="monthly">Bulanan</option>
+                            <option value="off">Laporan Off/Cuti</option>
                         </select>
                     </div>
 
@@ -109,7 +119,7 @@ export default function AdminReports() {
                                 onChange={(e) => setDate(e.target.value)}
                             />
                         </div>
-                    ) : (
+                    ) : reportType === 'monthly' ? (
                         <>
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">Bulan</label>
@@ -137,12 +147,33 @@ export default function AdminReports() {
                                 </select>
                             </div>
                         </>
+                    ) : (
+                        <>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Dari Tanggal</label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Sampai Tanggal</label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                />
+                            </div>
+                        </>
                     )}
                 </div>
             </div>
 
             {/* Summary Cards */}
-            {report && reportType === 'daily' && (
+            {report && report.summary && reportType === 'daily' && (
                 <div className="grid grid-4 mb-4">
                     <div className="card status-card">
                         <div className="status-card-icon primary">👥</div>
@@ -190,7 +221,9 @@ export default function AdminReports() {
                     <h2 className="card-title">
                         {reportType === 'daily'
                             ? `Laporan ${new Date(date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
-                            : `Laporan ${months[month - 1]} ${year}`
+                            : reportType === 'monthly'
+                                ? `Laporan ${months[month - 1]} ${year}`
+                                : `Laporan Off: ${new Date(startDate).toLocaleDateString('id-ID')} - ${new Date(endDate).toLocaleDateString('id-ID')}`
                         }
                     </h2>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -290,6 +323,46 @@ export default function AdminReports() {
                                                 <span className="badge badge-danger">❌ Tidak Hadir</span>
                                             )}
                                         </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : reportType === 'off' ? (
+                    <div className="table-container">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>ID Karyawan</th>
+                                    <th>Nama</th>
+                                    <th>Kategori</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {report.records.map((record, index) => (
+                                    <tr key={index}>
+                                        <td>{new Date(record.off_date).toLocaleDateString('id-ID', {
+                                            weekday: 'long',
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}</td>
+                                        <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
+                                        <td>{record.name}</td>
+                                        <td>
+                                            {record.type === 'off_day' ? (
+                                                <span className="badge badge-primary">Libur Rutin</span>
+                                            ) : record.category === 'sick' ? (
+                                                <span className="badge badge-danger">Sakit</span>
+                                            ) : record.category === 'leave' ? (
+                                                <span className="badge badge-warning">Cuti</span>
+                                            ) : (
+                                                <span className="badge badge-secondary">{record.category}</span>
+                                            )}
+                                        </td>
+                                        <td>{record.reason}</td>
                                     </tr>
                                 ))}
                             </tbody>

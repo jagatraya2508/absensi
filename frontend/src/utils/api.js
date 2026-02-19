@@ -172,6 +172,13 @@ export const reportsAPI = {
         return request(`/reports/employee/${id}?${params}`);
     },
 
+    getOff: (startDate, endDate) => {
+        const params = new URLSearchParams();
+        if (startDate) params.set('start_date', startDate);
+        if (endDate) params.set('end_date', endDate);
+        return request(`/reports/off?${params}`);
+    },
+
     // Export functions - return download URLs
     exportDailyPDF: (date) => {
         const token = localStorage.getItem('token');
@@ -221,6 +228,32 @@ export const reportsAPI = {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = `laporan-bulanan-${year}-${month}.xlsx`;
+                link.click();
+            });
+    },
+
+    exportOffPDF: (startDate, endDate) => {
+        const token = localStorage.getItem('token');
+        const url = `${API_BASE}/reports/export/off/pdf?start_date=${startDate}&end_date=${endDate}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `laporan-off-${startDate}-to-${endDate}.pdf`;
+                link.click();
+            });
+    },
+
+    exportOffExcel: (startDate, endDate) => {
+        const token = localStorage.getItem('token');
+        const url = `${API_BASE}/reports/export/off/excel?start_date=${startDate}&end_date=${endDate}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `laporan-off-${startDate}-to-${endDate}.xlsx`;
                 link.click();
             });
     },

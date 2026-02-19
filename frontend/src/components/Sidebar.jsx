@@ -17,11 +17,11 @@ export default function Sidebar() {
         { path: '/attendance', icon: '📸', label: 'Absensi' },
         { path: '/history', icon: '📋', label: 'Riwayat' },
         { path: '/leaves', icon: '📝', label: 'Izin & Cuti' },
-        { path: '/off-days', icon: '📅', label: 'Atur Libur' },
         { path: '/change-password', icon: '🔑', label: 'Ubah Password' },
     ];
 
     const adminItems = [
+        { path: '/off-days', icon: '📅', label: 'Atur Libur' },
         { path: '/admin/locations', icon: '📍', label: 'Kelola Lokasi' },
         { path: '/admin/users', icon: '👥', label: 'Kelola User' },
         { path: '/admin/face-registration', icon: '🔐', label: 'Registrasi Wajah' },

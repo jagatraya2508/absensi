@@ -115,7 +115,7 @@ function AppRoutes() {
             <Route
                 path="/off-days"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute adminOnly>
                         <AppLayout>
                             <OffDays />
                         </AppLayout>

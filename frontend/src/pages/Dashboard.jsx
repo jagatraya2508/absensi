@@ -235,12 +235,14 @@ export default function Dashboard() {
                     </Link>
 
                     {/* Off Day Setting */}
-                    <div className="menu-item" style={{ cursor: 'pointer' }} onClick={() => setShowOffDayModal(true)}>
-                        <div className="menu-icon bg-red-100 text-red-600">📅</div>
-                        <span className="menu-label">
-                            Atur Libur
-                        </span>
-                    </div>
+                    {user?.role === 'admin' && (
+                        <div className="menu-item" style={{ cursor: 'pointer' }} onClick={() => setShowOffDayModal(true)}>
+                            <div className="menu-icon bg-red-100 text-red-600">📅</div>
+                            <span className="menu-label">
+                                Atur Libur
+                            </span>
+                        </div>
+                    )}
 
                     {user?.role === 'admin' && (
                         <>

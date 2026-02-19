@@ -589,4 +589,249 @@ function formatTimeID(dateStr) {
     });
 }
 
+// Get Off/Leave report (Admin only)
+router.get('/off', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        // Default to current month if not specified
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const targetStart = start_date || firstDay;
+        const targetEnd = end_date || lastDay;
+
+        const result = await pool.query(
+            `SELECT 
+                u.employee_id,
+                u.name,
+                d.date::date as off_date,
+                'leave' as type,
+                lr.type as category,
+                lr.reason
+            FROM leave_requests lr
+            JOIN users u ON lr.user_id = u.id
+            CROSS JOIN LATERAL generate_series(lr.start_date, lr.end_date, '1 day') AS d(date)
+            WHERE lr.status = 'approved' AND d.date BETWEEN $1 AND $2
+
+            UNION ALL
+
+            SELECT 
+                u.employee_id,
+                u.name,
+                uod.off_date,
+                'off_day' as type,
+                'Libur' as category,
+                'Jadwal Libur' as reason
+            FROM user_off_days uod
+            JOIN users u ON uod.user_id = u.id
+            WHERE uod.off_date BETWEEN $1 AND $2
+
+            ORDER BY off_date DESC, name ASC`,
+            [targetStart, targetEnd]
+        );
+
+        res.json({
+            start_date: targetStart,
+            end_date: targetEnd,
+            records: result.rows
+        });
+    } catch (error) {
+        console.error('Get off report error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Export Off Report as PDF
+router.get('/export/off/pdf', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        const now = new Date();
+        const targetStart = start_date || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const targetEnd = end_date || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const result = await pool.query(
+            `SELECT 
+                u.employee_id,
+                u.name,
+                d.date::date as off_date,
+                'leave' as type,
+                lr.type as category,
+                lr.reason
+            FROM leave_requests lr
+            JOIN users u ON lr.user_id = u.id
+            CROSS JOIN LATERAL generate_series(lr.start_date, lr.end_date, '1 day') AS d(date)
+            WHERE lr.status = 'approved' AND d.date BETWEEN $1 AND $2
+
+            UNION ALL
+
+            SELECT 
+                u.employee_id,
+                u.name,
+                uod.off_date,
+                'off_day' as type,
+                'Libur' as category,
+                'Jadwal Libur' as reason
+            FROM user_off_days uod
+            JOIN users u ON uod.user_id = u.id
+            WHERE uod.off_date BETWEEN $1 AND $2
+
+            ORDER BY off_date ASC, name ASC`,
+            [targetStart, targetEnd]
+        );
+
+        const doc = new PDFDocument({ margin: 50 });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=laporan-off-${targetStart}-to-${targetEnd}.pdf`);
+
+        doc.pipe(res);
+
+        // Title
+        doc.fontSize(18).text('LAPORAN KARYAWAN OFF / CUTI', { align: 'center' });
+        doc.fontSize(12).text(`Periode: ${formatDateID(targetStart)} - ${formatDateID(targetEnd)}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Table Header
+        const tableTop = doc.y;
+        const col1 = 50, col2 = 130, col3 = 210, col4 = 350, col5 = 450;
+
+        doc.font('Helvetica-Bold').fontSize(10);
+        doc.text('Tanggal', col1, tableTop);
+        doc.text('ID', col2, tableTop);
+        doc.text('Nama', col3, tableTop);
+        doc.text('Kategori', col4, tableTop);
+        doc.text('Keterangan', col5, tableTop);
+
+        doc.moveTo(col1, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+
+        // Table Rows
+        doc.font('Helvetica').fontSize(9);
+        let yPosition = tableTop + 25;
+
+        result.rows.forEach((row) => {
+            if (yPosition > 700) {
+                doc.addPage();
+                yPosition = 50;
+            }
+
+            const categoryLabel = row.type === 'off_day' ? 'Libur Rutin' :
+                (row.category === 'sick' ? 'Sakit' :
+                    (row.category === 'leave' ? 'Cuti' : 'Izin'));
+
+            doc.text(formatDateID(row.off_date), col1, yPosition);
+            doc.text(row.employee_id || '-', col2, yPosition);
+            doc.text(row.name || '-', col3, yPosition, { width: 130 });
+            doc.text(categoryLabel, col4, yPosition);
+            doc.text(row.reason || '-', col5, yPosition, { width: 100 });
+
+            yPosition += 20;
+        });
+
+        // Footer
+        doc.fontSize(8).text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 50, 750);
+
+        doc.end();
+    } catch (error) {
+        console.error('Export Off PDF error:', error);
+        res.status(500).json({ error: 'Gagal membuat PDF' });
+    }
+});
+
+// Export Off Report as Excel
+router.get('/export/off/excel', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        const now = new Date();
+        const targetStart = start_date || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const targetEnd = end_date || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const result = await pool.query(
+            `SELECT 
+                u.employee_id,
+                u.name,
+                d.date::date as off_date,
+                'leave' as type,
+                lr.type as category,
+                lr.reason
+            FROM leave_requests lr
+            JOIN users u ON lr.user_id = u.id
+            CROSS JOIN LATERAL generate_series(lr.start_date, lr.end_date, '1 day') AS d(date)
+            WHERE lr.status = 'approved' AND d.date BETWEEN $1 AND $2
+
+            UNION ALL
+
+            SELECT 
+                u.employee_id,
+                u.name,
+                uod.off_date,
+                'off_day' as type,
+                'Libur' as category,
+                'Jadwal Libur' as reason
+            FROM user_off_days uod
+            JOIN users u ON uod.user_id = u.id
+            WHERE uod.off_date BETWEEN $1 AND $2
+
+            ORDER BY off_date ASC, name ASC`,
+            [targetStart, targetEnd]
+        );
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Laporan Cuti & Libur');
+
+        // Title
+        worksheet.mergeCells('A1:E1');
+        worksheet.getCell('A1').value = 'LAPORAN KARYAWAN OFF / CUTI';
+        worksheet.getCell('A1').font = { bold: true, size: 14 };
+        worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+        worksheet.mergeCells('A2:E2');
+        worksheet.getCell('A2').value = `Periode: ${formatDateID(targetStart)} - ${formatDateID(targetEnd)}`;
+        worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+        // Header
+        worksheet.getRow(4).values = ['Tanggal', 'ID Karyawan', 'Nama', 'Kategori', 'Keterangan'];
+        worksheet.getRow(4).font = { bold: true };
+        worksheet.getRow(4).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1E3A8A' }
+        };
+        worksheet.getRow(4).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+        // Data
+        result.rows.forEach((row) => {
+            const categoryLabel = row.type === 'off_day' ? 'Libur Rutin' :
+                (row.category === 'sick' ? 'Sakit' :
+                    (row.category === 'leave' ? 'Cuti' : 'Izin'));
+
+            worksheet.addRow([
+                formatDateID(row.off_date),
+                row.employee_id,
+                row.name,
+                categoryLabel,
+                row.reason
+            ]);
+        });
+
+        // Widths
+        worksheet.columns = [
+            { width: 25 },
+            { width: 15 },
+            { width: 30 },
+            { width: 15 },
+            { width: 30 }
+        ];
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=laporan-off-${targetStart}-to-${targetEnd}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Export Off Excel error:', error);
+        res.status(500).json({ error: 'Gagal membuat Excel' });
+    }
+});
+
 module.exports = router;
