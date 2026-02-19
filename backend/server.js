@@ -42,6 +42,7 @@ app.use('/api/face', faceRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/schedule', require('./routes/schedule'));
+app.use('/api/off-days', require('./routes/offDays'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

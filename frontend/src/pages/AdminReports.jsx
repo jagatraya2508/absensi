@@ -11,6 +11,15 @@ export default function AdminReports() {
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+
+    const requestSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
 
     useEffect(() => {
         fetchReport();
@@ -255,169 +264,244 @@ export default function AdminReports() {
                         <div className="empty-state-icon">📊</div>
                         <p className="empty-state-text">Tidak ada data untuk periode ini</p>
                     </div>
-                ) : reportType === 'daily' ? (
-                    <div className="table-container">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Employee ID</th>
-                                    <th>Nama</th>
-                                    <th>Check-in</th>
-                                    <th>Check-out</th>
-                                    <th>Lokasi</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {report.records.map((record) => (
-                                    <tr key={record.user_id}>
-                                        <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
-                                        <td>{record.name}</td>
-                                        <td>
-                                            {record.check_in_time ? (
-                                                <div>
-                                                    <span>{formatTime(record.check_in_time)}</span>
-                                                    {!record.check_in_valid && (
-                                                        <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
-                                                            ⚠
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-muted">-</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            {record.check_out_time ? (
-                                                <div>
-                                                    <span>{formatTime(record.check_out_time)}</span>
-                                                    {!record.check_out_valid && (
-                                                        <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
-                                                            ⚠
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-muted">-</span>
-                                            )}
-                                        </td>
-                                        <td>{record.location_name || '-'}</td>
-                                        <td>
-                                            {record.is_off_day ? (
-                                                <span className="badge badge-primary">🏖️ OFF</span>
-                                            ) : record.check_in_time && record.check_out_time ? (
-                                                <span className="badge badge-success">✅ Lengkap</span>
-                                            ) : record.check_in_time ? (
-                                                record.leave_type === 'late' ? (
-                                                    <span className="badge badge-warning">⏰ Terlambat</span>
-                                                ) : (
-                                                    <span className="badge badge-warning">⏳ Belum Pulang</span>
-                                                )
-                                            ) : record.leave_type === 'sick' ? (
-                                                <span className="badge badge-danger">🏥 Sakit</span>
-                                            ) : record.leave_type === 'leave' ? (
-                                                <span className="badge badge-primary">🏖️ Cuti</span>
-                                            ) : record.leave_type === 'late' ? (
-                                                <span className="badge badge-warning">⏰ Izin Terlambat</span>
-                                            ) : (
-                                                <span className="badge badge-danger">❌ Tidak Hadir</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : reportType === 'off' ? (
-                    <div className="table-container">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>ID Karyawan</th>
-                                    <th>Nama</th>
-                                    <th>Kategori</th>
-                                    <th>Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {report.records.map((record, index) => (
-                                    <tr key={index}>
-                                        <td>{new Date(record.off_date).toLocaleDateString('id-ID', {
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        })}</td>
-                                        <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
-                                        <td>{record.name}</td>
-                                        <td>
-                                            {record.type === 'off_day' ? (
-                                                <span className="badge badge-primary">Libur Rutin</span>
-                                            ) : record.category === 'sick' ? (
-                                                <span className="badge badge-danger">Sakit</span>
-                                            ) : record.category === 'leave' ? (
-                                                <span className="badge badge-warning">Cuti</span>
-                                            ) : (
-                                                <span className="badge badge-secondary">{record.category}</span>
-                                            )}
-                                        </td>
-                                        <td>{record.reason}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
                 ) : (
-                    <div className="table-container">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Employee ID</th>
-                                    <th>Nama</th>
-                                    <th>Hadir</th>
-                                    <th>Tidak Hadir</th>
-                                    <th>Valid</th>
-                                    <th>Diluar Area</th>
-                                    <th>Persentase</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {report.records.map((record) => (
-                                    <tr key={record.user_id}>
-                                        <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
-                                        <td>{record.name}</td>
-                                        <td>{record.total_present}</td>
-                                        <td>{record.total_absent}</td>
-                                        <td>{record.valid_checkins}</td>
-                                        <td>{record.invalid_checkins}</td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <div style={{
-                                                    width: 60,
-                                                    height: 6,
-                                                    background: 'var(--gray-700)',
-                                                    borderRadius: 3,
-                                                    overflow: 'hidden'
-                                                }}>
-                                                    <div style={{
-                                                        width: `${record.attendance_rate}%`,
-                                                        height: '100%',
-                                                        background: record.attendance_rate >= 80
-                                                            ? 'var(--success-500)'
-                                                            : record.attendance_rate >= 60
-                                                                ? 'var(--warning-500)'
-                                                                : 'var(--danger-500)'
-                                                    }} />
-                                                </div>
-                                                <span>{record.attendance_rate}%</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <>
+                        {/* Sort Logic */}
+                        {(() => {
+                            const sortedRecords = [...report.records];
+                            if (sortConfig.key) {
+                                sortedRecords.sort((a, b) => {
+                                    let aValue = a[sortConfig.key];
+                                    let bValue = b[sortConfig.key];
+
+                                    // Handle specific columns for better sorting
+                                    if (sortConfig.key === 'attendance_rate') {
+                                        // Sort by number, remove % if needed (though data is number)
+                                        // attendance_rate is number in data
+                                    }
+
+                                    // Handle nested or computed values if needed (passed as plain keys currently)
+
+                                    if (aValue < bValue) {
+                                        return sortConfig.direction === 'ascending' ? -1 : 1;
+                                    }
+                                    if (aValue > bValue) {
+                                        return sortConfig.direction === 'ascending' ? 1 : -1;
+                                    }
+                                    return 0;
+                                });
+                            }
+
+                            // Render based on type
+                            // Render based on type
+                            if (reportType === 'daily') {
+                                return (
+                                    <div className="table-container">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th onClick={() => requestSort('employee_id')} style={{ cursor: 'pointer' }}>
+                                                        Employee ID {sortConfig.key === 'employee_id' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('name')} style={{ cursor: 'pointer' }}>
+                                                        Nama {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('check_in_time')} style={{ cursor: 'pointer' }}>
+                                                        Check-in {sortConfig.key === 'check_in_time' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('check_out_time')} style={{ cursor: 'pointer' }}>
+                                                        Check-out {sortConfig.key === 'check_out_time' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('location_name')} style={{ cursor: 'pointer' }}>
+                                                        Lokasi {sortConfig.key === 'location_name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {sortedRecords.map((record) => (
+                                                    <tr key={record.user_id}>
+                                                        <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
+                                                        <td>{record.name}</td>
+                                                        <td>
+                                                            {record.check_in_time ? (
+                                                                <div>
+                                                                    <span>{formatTime(record.check_in_time)}</span>
+                                                                    {!record.check_in_valid && (
+                                                                        <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
+                                                                            ⚠
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-muted">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td>
+                                                            {record.check_out_time ? (
+                                                                <div>
+                                                                    <span>{formatTime(record.check_out_time)}</span>
+                                                                    {!record.check_out_valid && (
+                                                                        <span className="badge badge-warning" style={{ marginLeft: '0.5rem' }}>
+                                                                            ⚠
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-muted">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td>{record.location_name || '-'}</td>
+                                                        <td>
+                                                            {record.is_off_day ? (
+                                                                <span className="badge badge-primary">🏖️ OFF</span>
+                                                            ) : record.check_in_time && record.check_out_time ? (
+                                                                <span className="badge badge-success">✅ Lengkap</span>
+                                                            ) : record.check_in_time ? (
+                                                                record.leave_type === 'late' ? (
+                                                                    <span className="badge badge-warning">⏰ Terlambat</span>
+                                                                ) : (
+                                                                    <span className="badge badge-warning">⏳ Belum Pulang</span>
+                                                                )
+                                                            ) : record.leave_type === 'sick' ? (
+                                                                <span className="badge badge-danger">🏥 Sakit</span>
+                                                            ) : record.leave_type === 'leave' ? (
+                                                                <span className="badge badge-primary">🏖️ Cuti</span>
+                                                            ) : record.leave_type === 'late' ? (
+                                                                <span className="badge badge-warning">⏰ Izin Terlambat</span>
+                                                            ) : (
+                                                                <span className="badge badge-danger">❌ Tidak Hadir</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            }
+
+                            if (reportType === 'monthly') {
+                                return (
+                                    <div className="table-container">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th onClick={() => requestSort('employee_id')} style={{ cursor: 'pointer' }}>
+                                                        Employee ID {sortConfig.key === 'employee_id' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('name')} style={{ cursor: 'pointer' }}>
+                                                        Nama {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('total_present')} style={{ cursor: 'pointer' }}>
+                                                        Hadir {sortConfig.key === 'total_present' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('total_absent')} style={{ cursor: 'pointer' }}>
+                                                        Tidak Hadir {sortConfig.key === 'total_absent' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('valid_checkins')} style={{ cursor: 'pointer' }}>
+                                                        Valid {sortConfig.key === 'valid_checkins' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('invalid_checkins')} style={{ cursor: 'pointer' }}>
+                                                        Diluar Area {sortConfig.key === 'invalid_checkins' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('attendance_rate')} style={{ cursor: 'pointer' }}>
+                                                        Persentase {sortConfig.key === 'attendance_rate' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {sortedRecords.map((record) => (
+                                                    <tr key={record.user_id}>
+                                                        <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
+                                                        <td>{record.name}</td>
+                                                        <td>{record.total_present}</td>
+                                                        <td>{record.total_absent}</td>
+                                                        <td>{record.valid_checkins}</td>
+                                                        <td>{record.invalid_checkins}</td>
+                                                        <td>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <div style={{
+                                                                    width: 60,
+                                                                    height: 6,
+                                                                    background: 'var(--gray-700)',
+                                                                    borderRadius: 3,
+                                                                    overflow: 'hidden'
+                                                                }}>
+                                                                    <div style={{
+                                                                        width: `${record.attendance_rate}%`,
+                                                                        height: '100%',
+                                                                        background: record.attendance_rate >= 80
+                                                                            ? 'var(--success-500)'
+                                                                            : record.attendance_rate >= 60
+                                                                                ? 'var(--warning-500)'
+                                                                                : 'var(--danger-500)'
+                                                                    }} />
+                                                                </div>
+                                                                <span>{record.attendance_rate}%</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="table-container">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th onClick={() => requestSort('off_date')} style={{ cursor: 'pointer' }}>
+                                                    Tanggal {sortConfig.key === 'off_date' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                </th>
+                                                <th onClick={() => requestSort('employee_id')} style={{ cursor: 'pointer' }}>
+                                                    ID Karyawan {sortConfig.key === 'employee_id' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                </th>
+                                                <th onClick={() => requestSort('name')} style={{ cursor: 'pointer' }}>
+                                                    Nama {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                </th>
+                                                <th onClick={() => requestSort('type')} style={{ cursor: 'pointer' }}>
+                                                    Kategori {sortConfig.key === 'type' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                </th>
+                                                <th onClick={() => requestSort('reason')} style={{ cursor: 'pointer' }}>
+                                                    Keterangan {sortConfig.key === 'reason' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sortedRecords.map((record, index) => (
+                                                <tr key={index}>
+                                                    <td>{new Date(record.off_date).toLocaleDateString('id-ID', {
+                                                        weekday: 'long',
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric'
+                                                    })}</td>
+                                                    <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
+                                                    <td>{record.name}</td>
+                                                    <td>
+                                                        {record.type === 'off_day' ? (
+                                                            <span className="badge badge-primary">Libur Rutin</span>
+                                                        ) : record.category === 'sick' ? (
+                                                            <span className="badge badge-danger">Sakit</span>
+                                                        ) : record.category === 'leave' ? (
+                                                            <span className="badge badge-warning">Cuti</span>
+                                                        ) : (
+                                                            <span className="badge badge-secondary">{record.category}</span>
+                                                        )}
+                                                    </td>
+                                                    <td>{record.reason}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            );
+                        })()}
+                    </>
                 )}
             </div>
         </div>

@@ -360,6 +360,18 @@ export const scheduleAPI = {
     }),
 };
 
+// Off Days API (Admin per user)
+export const offDaysAPI = {
+    getByUser: (userId) => request(`/off-days/${userId}`),
+
+    add: (userId, date) => request('/off-days', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, date }),
+    }),
+
+    delete: (id) => request(`/off-days/${id}`, { method: 'DELETE' }),
+};
+
 export default {
     authAPI,
     attendanceAPI,
@@ -369,5 +381,6 @@ export default {
     faceAPI,
     announcementsAPI,
     settingsAPI,
-    scheduleAPI
+    scheduleAPI,
+    offDaysAPI
 };

@@ -12,6 +12,7 @@ export default function History() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [selectedUser, setSelectedUser] = useState('all');
+    const [sortOrder, setSortOrder] = useState('desc');
 
     // Image Modal State
     const [selectedImg, setSelectedImg] = useState({ src: '', caption: '', isOpen: false });
@@ -132,6 +133,17 @@ export default function History() {
                             onChange={(e) => setEndDate(e.target.value)}
                         />
                     </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Urutkan</label>
+                        <select
+                            className="form-input form-select"
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value)}
+                        >
+                            <option value="desc">Terbaru</option>
+                            <option value="asc">Terlama</option>
+                        </select>
+                    </div>
                     <button type="submit" className="btn btn-primary">
                         🔍 Filter
                     </button>
@@ -169,129 +181,138 @@ export default function History() {
                     </div>
                 </div>
             ) : (
-                Object.entries(groupedRecords).map(([date, dayRecords]) => (
-                    <div key={date} className="card mb-3">
-                        <div className="card-header">
-                            <h3 className="card-title" style={{ fontSize: '1rem' }}>
-                                {formatDate(dayRecords[0].recorded_at)}
-                            </h3>
-                        </div>
+                Object.keys(groupedRecords)
+                    .sort((a, b) => {
+                        const dateA = new Date(a);
+                        const dateB = new Date(b);
+                        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+                    })
+                    .map((date) => {
+                        const dayRecords = groupedRecords[date];
+                        return (
+                            <div key={date} className="card mb-3">
+                                <div className="card-header">
+                                    <h3 className="card-title" style={{ fontSize: '1rem' }}>
+                                        {formatDate(dayRecords[0].recorded_at)}
+                                    </h3>
+                                </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {dayRecords.map((record) => (
-                                record.type === 'off_day' ? (
-                                    <div
-                                        key={record.id}
-                                        style={{
-                                            display: 'flex',
-                                            gap: '1rem',
-                                            alignItems: 'center',
-                                            padding: '1rem',
-                                            background: 'rgba(99, 102, 241, 0.1)',
-                                            borderRadius: 'var(--radius-lg)',
-                                            border: '1px solid rgba(99, 102, 241, 0.3)'
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: 50, height: 50,
-                                            borderRadius: 'var(--radius)',
-                                            background: 'rgba(99, 102, 241, 0.2)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '1.5rem', flexShrink: 0
-                                        }}>
-                                            🏖️
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            {isAdmin && record.user_name && (
-                                                <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-                                                    {record.user_name}
-                                                    <span style={{ color: 'var(--gray-400)', fontWeight: 400, marginLeft: '0.5rem' }}>
-                                                        ({record.employee_id})
-                                                    </span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {dayRecords.map((record) => (
+                                        record.type === 'off_day' ? (
+                                            <div
+                                                key={record.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    gap: '1rem',
+                                                    alignItems: 'center',
+                                                    padding: '1rem',
+                                                    background: 'rgba(99, 102, 241, 0.1)',
+                                                    borderRadius: 'var(--radius-lg)',
+                                                    border: '1px solid rgba(99, 102, 241, 0.3)'
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: 50, height: 50,
+                                                    borderRadius: 'var(--radius)',
+                                                    background: 'rgba(99, 102, 241, 0.2)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: '1.5rem', flexShrink: 0
+                                                }}>
+                                                    🏖️
                                                 </div>
-                                            )}
-                                            <div style={{ fontWeight: 600, color: 'var(--primary-300)' }}>Hari Libur</div>
-                                        </div>
-                                        <span className="badge badge-primary" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>
-                                            OFF
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <div
-                                        key={record.id}
-                                        style={{
-                                            display: 'flex',
-                                            gap: '1rem',
-                                            alignItems: 'center',
-                                            padding: '0.75rem',
-                                            background: 'rgba(255,255,255,0.03)',
-                                            borderRadius: 'var(--radius-lg)'
-                                        }}
-                                    >
-                                        <img
-                                            src={record.photo_path}
-                                            alt={record.type}
-                                            className="photo-thumb-lg"
-                                            onClick={() => setSelectedImg({
-                                                src: record.photo_path,
-                                                caption: `${record.user_name || user?.name} - ${formatDate(record.recorded_at)} ${formatTime(record.recorded_at)}`,
-                                                isOpen: true
-                                            })}
-                                        />
-                                        <div style={{ flex: 1 }}>
-                                            {isAdmin && record.user_name && (
-                                                <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-                                                    {record.user_name}
-                                                    <span style={{ color: 'var(--gray-400)', fontWeight: 400, marginLeft: '0.5rem' }}>
-                                                        ({record.employee_id})
-                                                    </span>
+                                                <div style={{ flex: 1 }}>
+                                                    {isAdmin && record.user_name && (
+                                                        <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                                                            {record.user_name}
+                                                            <span style={{ color: 'var(--gray-400)', fontWeight: 400, marginLeft: '0.5rem' }}>
+                                                                ({record.employee_id})
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ fontWeight: 600, color: 'var(--primary-300)' }}>Hari Libur</div>
                                                 </div>
-                                            )}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                                <span className={`badge ${record.type === 'check_in' ? 'badge-primary' : 'badge-warning'}`}>
-                                                    {record.type === 'check_in' ? '📥 Masuk' : '📤 Pulang'}
+                                                <span className="badge badge-primary" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>
+                                                    OFF
                                                 </span>
-                                                <span style={{ fontWeight: 600 }}>{formatTime(record.recorded_at)}</span>
                                             </div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--gray-400)' }}>
-                                                📍 {record.location_name || 'Lokasi tidak diketahui'}
-                                            </div>
-                                            {record.notes && (
-                                                <div style={{ fontSize: '0.85rem', color: 'var(--gray-300)', marginTop: '0.25rem' }}>
-                                                    💬 {record.notes}
+                                        ) : (
+                                            <div
+                                                key={record.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    gap: '1rem',
+                                                    alignItems: 'center',
+                                                    padding: '0.75rem',
+                                                    background: 'rgba(255,255,255,0.03)',
+                                                    borderRadius: 'var(--radius-lg)'
+                                                }}
+                                            >
+                                                <img
+                                                    src={record.photo_path}
+                                                    alt={record.type}
+                                                    className="photo-thumb-lg"
+                                                    onClick={() => setSelectedImg({
+                                                        src: record.photo_path,
+                                                        caption: `${record.user_name || user?.name} - ${formatDate(record.recorded_at)} ${formatTime(record.recorded_at)}`,
+                                                        isOpen: true
+                                                    })}
+                                                />
+                                                <div style={{ flex: 1 }}>
+                                                    {isAdmin && record.user_name && (
+                                                        <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                                                            {record.user_name}
+                                                            <span style={{ color: 'var(--gray-400)', fontWeight: 400, marginLeft: '0.5rem' }}>
+                                                                ({record.employee_id})
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                                        <span className={`badge ${record.type === 'check_in' ? 'badge-primary' : 'badge-warning'}`}>
+                                                            {record.type === 'check_in' ? '📥 Masuk' : '📤 Pulang'}
+                                                        </span>
+                                                        <span style={{ fontWeight: 600 }}>{formatTime(record.recorded_at)}</span>
+                                                    </div>
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--gray-400)' }}>
+                                                        📍 {record.location_name || 'Lokasi tidak diketahui'}
+                                                    </div>
+                                                    {record.notes && (
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--gray-300)', marginTop: '0.25rem' }}>
+                                                            💬 {record.notes}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <span className={`badge ${record.is_valid ? 'badge-success' : 'badge-warning'}`}>
-                                                {record.is_valid ? '✓ Valid' : `⚠ ${Math.round(record.distance_meters || 0)}m`}
-                                            </span>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                                                {record.latitude ? parseFloat(record.latitude).toFixed(4) : '-'}, {record.longitude ? parseFloat(record.longitude).toFixed(4) : '-'}
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <span className={`badge ${record.is_valid ? 'badge-success' : 'badge-warning'}`}>
+                                                        {record.is_valid ? '✓ Valid' : `⚠ ${Math.round(record.distance_meters || 0)}m`}
+                                                    </span>
+                                                    <div style={{ fontSize: '0.7rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
+                                                        {record.latitude ? parseFloat(record.latitude).toFixed(4) : '-'}, {record.longitude ? parseFloat(record.longitude).toFixed(4) : '-'}
+                                                    </div>
+                                                    {isAdmin && (
+                                                        <button
+                                                            className="btn btn-danger"
+                                                            style={{
+                                                                padding: '0.25rem 0.5rem',
+                                                                fontSize: '0.75rem',
+                                                                marginTop: '0.5rem',
+                                                                width: 'auto',
+                                                                marginLeft: 'auto',
+                                                                display: 'block'
+                                                            }}
+                                                            onClick={() => handleDelete(record.id)}
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            {isAdmin && (
-                                                <button
-                                                    className="btn btn-danger"
-                                                    style={{
-                                                        padding: '0.25rem 0.5rem',
-                                                        fontSize: '0.75rem',
-                                                        marginTop: '0.5rem',
-                                                        width: 'auto',
-                                                        marginLeft: 'auto',
-                                                        display: 'block'
-                                                    }}
-                                                    onClick={() => handleDelete(record.id)}
-                                                >
-                                                    🗑️
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )
-                            ))}
-                        </div>
-                    </div>
-                ))
+                                        )
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })
             )}
 
             <ImageModal

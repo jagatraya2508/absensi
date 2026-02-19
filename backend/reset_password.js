@@ -2,10 +2,10 @@ const bcrypt = require('bcryptjs');
 const { Client } = require('pg');
 
 const client = new Client({
-    user: 'wisnu',
+    user: 'postgres',
     host: 'localhost',
-    database: 'absensi',
-    password: 'Admin2026',
+    database: 'dbabsen',
+    password: 'sa',
     port: 5432,
 });
 

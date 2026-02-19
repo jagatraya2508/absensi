@@ -52,6 +52,17 @@ router.post('/check-in', authenticateToken, upload.single('photo'), async (req, 
 
         // Check if already checked in today
         const today = new Date().toISOString().split('T')[0];
+
+        // Check if today is an off day
+        const offDayCheck = await pool.query(
+            'SELECT * FROM user_off_days WHERE user_id = $1 AND off_date = $2',
+            [req.user.id, today]
+        );
+
+        if (offDayCheck.rows.length > 0) {
+            return res.status(400).json({ error: 'Anda sedang libur hari ini, tidak dapat melakukan absen.' });
+        }
+
         const existingCheckin = await pool.query(
             `SELECT * FROM attendance_records 
        WHERE user_id = $1 AND type = 'check_in' 
@@ -347,45 +358,62 @@ router.get('/history', authenticateToken, async (req, res) => {
         const result = await pool.query(query, params);
 
         // Also fetch off days for the relevant user(s) and date range
+        // If targetUserId is set (specific user), fetch for that user
+        // If targetUserId is null (Admin viewing all), fetch for ALL users within range
         const targetUserId = !isAdmin ? req.user.id : (user_id && user_id !== 'all' ? user_id : null);
         let offDayRecords = [];
 
-        if (targetUserId) {
-            const offParams = [targetUserId];
-            let offQuery = `
+        const offParams = [];
+        let offQuery = `
               SELECT uod.off_date, u.name as user_name, u.employee_id, u.id as user_id
               FROM user_off_days uod
               JOIN users u ON uod.user_id = u.id
-              WHERE uod.user_id = $1
             `;
-            if (start_date) {
-                offParams.push(start_date);
-                offQuery += ` AND uod.off_date >= $${offParams.length}`;
-            }
-            if (end_date) {
-                offParams.push(end_date);
-                offQuery += ` AND uod.off_date <= $${offParams.length}`;
-            }
-            offQuery += ` ORDER BY uod.off_date DESC`;
 
-            const offResult = await pool.query(offQuery, offParams);
-            offDayRecords = offResult.rows.map(row => ({
-                id: `off_${row.user_id}_${row.off_date}`,
-                user_id: row.user_id,
-                type: 'off_day',
-                recorded_at: row.off_date,
-                user_name: row.user_name,
-                employee_id: row.employee_id,
-                is_off_day: true,
-                photo_path: null,
-                location_name: null,
-                latitude: null,
-                longitude: null,
-                distance_meters: null,
-                is_valid: null,
-                notes: 'Hari Libur'
-            }));
+        const offConditions = [];
+
+        if (targetUserId) {
+            offParams.push(targetUserId);
+            offConditions.push(`uod.user_id = $${offParams.length}`);
         }
+
+        if (start_date) {
+            offParams.push(start_date);
+            offConditions.push(`uod.off_date >= $${offParams.length}`);
+        }
+
+        if (end_date) {
+            offParams.push(end_date);
+            offConditions.push(`uod.off_date <= $${offParams.length}`);
+        }
+
+        if (offConditions.length > 0) {
+            offQuery += ` WHERE ${offConditions.join(' AND ')}`;
+        }
+
+        offQuery += ` ORDER BY uod.off_date DESC`;
+
+        // If no date range and no user selected (e.g. initial load), we might want to limit?
+        // But for history usually there is a date range or limit.
+        // Let's just run the query.
+
+        const offResult = await pool.query(offQuery, offParams);
+        offDayRecords = offResult.rows.map(row => ({
+            id: `off_${row.user_id}_${row.off_date}`,
+            user_id: row.user_id,
+            type: 'off_day',
+            recorded_at: row.off_date,
+            user_name: row.user_name,
+            employee_id: row.employee_id,
+            is_off_day: true,
+            photo_path: null,
+            location_name: null,
+            latitude: null,
+            longitude: null,
+            distance_meters: null,
+            is_valid: null,
+            notes: 'Hari Libur'
+        }));
 
         // Merge attendance records with off day records
         const allRecords = [...result.rows, ...offDayRecords];

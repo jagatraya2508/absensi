@@ -4,7 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { attendanceAPI, announcementsAPI, scheduleAPI } from '../utils/api';
 import ImageModal from '../components/ImageModal';
-import OffDayManager from '../components/OffDayManager';
+// OffDayManager import removed
+// Modal state removed
+// Modal JSX removed
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -16,9 +18,6 @@ export default function Dashboard() {
 
     // Image Modal State
     const [selectedImg, setSelectedImg] = useState({ src: '', caption: '', isOpen: false });
-
-    // Off Day Modal State
-    const [showOffDayModal, setShowOffDayModal] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -236,12 +235,12 @@ export default function Dashboard() {
 
                     {/* Off Day Setting */}
                     {user?.role === 'admin' && (
-                        <div className="menu-item" style={{ cursor: 'pointer' }} onClick={() => setShowOffDayModal(true)}>
+                        <Link to="/off-days" className="menu-item">
                             <div className="menu-icon bg-red-100 text-red-600">📅</div>
                             <span className="menu-label">
                                 Atur Libur
                             </span>
-                        </div>
+                        </Link>
                     )}
 
                     {user?.role === 'admin' && (
@@ -275,34 +274,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Off Day Modal */}
-            {showOffDayModal && (
-                <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1rem', paddingTop: '2rem', overflowY: 'auto' }}>
-                    <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', minHeight: '50vh', display: 'flex', flexDirection: 'column', borderRadius: '1.25rem', margin: 0 }}>
-                        {/* Header */}
-                        <div className="card-header" style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                            <h2 className="card-title" style={{ fontSize: '1.3rem', margin: 0 }}>📅 Atur Tanggal Libur</h2>
-                            <button className="btn btn-outline" style={{ fontSize: '1.2rem', padding: '0.5rem 0.75rem' }} onClick={() => setShowOffDayModal(false)}>✕</button>
-                        </div>
-
-                        {/* Content using Shared Component */}
-                        <div style={{ padding: '1.25rem 1.5rem', flex: 1, overflowY: 'auto' }}>
-                            <OffDayManager onClose={() => setShowOffDayModal(false)} />
-                        </div>
-
-                        {/* Close Button */}
-                        <div style={{ padding: '1rem 1.5rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                            <button
-                                className="btn btn-outline"
-                                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem', fontWeight: 600, borderRadius: 'var(--radius)' }}
-                                onClick={() => setShowOffDayModal(false)}
-                            >
-                                Tutup
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Detail Absensi Hari Ini */}
             {(todayStatus?.check_in || todayStatus?.check_out) && (
