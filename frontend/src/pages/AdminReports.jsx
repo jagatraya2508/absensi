@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { reportsAPI } from '../utils/api';
+import { reportsAPI, authAPI } from '../utils/api';
 
 export default function AdminReports() {
     const [reportType, setReportType] = useState('daily');
@@ -13,6 +13,10 @@ export default function AdminReports() {
     const [exporting, setExporting] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
 
+    // History-specific state
+    const [historyUsers, setHistoryUsers] = useState([]);
+    const [historySelectedUser, setHistorySelectedUser] = useState('all');
+
     const requestSort = (key) => {
         let direction = 'ascending';
         if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -22,8 +26,23 @@ export default function AdminReports() {
     };
 
     useEffect(() => {
+        if (reportType === 'history') {
+            fetchHistoryUsers();
+        }
+    }, [reportType]);
+
+    useEffect(() => {
         fetchReport();
-    }, [reportType, date, year, month, startDate, endDate]);
+    }, [reportType, date, year, month, startDate, endDate, historySelectedUser]);
+
+    async function fetchHistoryUsers() {
+        try {
+            const data = await authAPI.getUsers();
+            setHistoryUsers(data || []);
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+        }
+    }
 
     async function fetchReport() {
         setLoading(true);
@@ -36,6 +55,9 @@ export default function AdminReports() {
                 setReport(data);
             } else if (reportType === 'off') {
                 const data = await reportsAPI.getOff(startDate, endDate);
+                setReport(data);
+            } else if (reportType === 'history') {
+                const data = await reportsAPI.getHistory(startDate, endDate, historySelectedUser);
                 setReport(data);
             }
         } catch (error) {
@@ -54,6 +76,8 @@ export default function AdminReports() {
                 await reportsAPI.exportMonthlyPDF(year, month);
             } else if (reportType === 'off') {
                 await reportsAPI.exportOffPDF(startDate, endDate);
+            } else if (reportType === 'history') {
+                await reportsAPI.exportHistoryPDF(startDate, endDate, historySelectedUser);
             }
         } catch (error) {
             console.error('Export PDF failed:', error);
@@ -72,6 +96,8 @@ export default function AdminReports() {
                 await reportsAPI.exportMonthlyExcel(year, month);
             } else if (reportType === 'off') {
                 await reportsAPI.exportOffExcel(startDate, endDate);
+            } else if (reportType === 'history') {
+                await reportsAPI.exportHistoryExcel(startDate, endDate, historySelectedUser);
             }
         } catch (error) {
             console.error('Export Excel failed:', error);
@@ -86,6 +112,16 @@ export default function AdminReports() {
         return new Date(dateString).toLocaleTimeString('id-ID', {
             hour: '2-digit',
             minute: '2-digit'
+        });
+    }
+
+    function formatDateShort(dateString) {
+        if (!dateString) return '-';
+        return new Date(dateString).toLocaleDateString('id-ID', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
         });
     }
 
@@ -115,6 +151,7 @@ export default function AdminReports() {
                             <option value="daily">Harian</option>
                             <option value="monthly">Bulanan</option>
                             <option value="off">Laporan Off/Cuti</option>
+                            <option value="history">Riwayat Absensi</option>
                         </select>
                     </div>
 
@@ -158,6 +195,23 @@ export default function AdminReports() {
                         </>
                     ) : (
                         <>
+                            {reportType === 'history' && (
+                                <div className="form-group" style={{ marginBottom: 0, minWidth: '200px' }}>
+                                    <label className="form-label">Karyawan</label>
+                                    <select
+                                        className="form-input form-select"
+                                        value={historySelectedUser}
+                                        onChange={(e) => setHistorySelectedUser(e.target.value)}
+                                    >
+                                        <option value="all">Semua Karyawan</option>
+                                        {historyUsers.map((u) => (
+                                            <option key={u.id} value={u.id}>
+                                                {u.name} ({u.employee_id})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label className="form-label">Dari Tanggal</label>
                                 <input
@@ -224,6 +278,40 @@ export default function AdminReports() {
                 </div>
             )}
 
+            {/* History Summary Cards */}
+            {report && reportType === 'history' && report.records && (
+                <div className="grid grid-4 mb-4">
+                    <div className="card status-card">
+                        <div className="status-card-icon primary">📋</div>
+                        <div className="status-card-content">
+                            <h3>Total Record</h3>
+                            <p>{report.total || report.records.length}</p>
+                        </div>
+                    </div>
+                    <div className="card status-card">
+                        <div className="status-card-icon success">✓</div>
+                        <div className="status-card-content">
+                            <h3>Hadir</h3>
+                            <p>{report.records.filter(r => r.check_in_time).length}</p>
+                        </div>
+                    </div>
+                    <div className="card status-card">
+                        <div className="status-card-icon warning">✓✓</div>
+                        <div className="status-card-content">
+                            <h3>Lengkap</h3>
+                            <p>{report.records.filter(r => r.check_in_time && r.check_out_time).length}</p>
+                        </div>
+                    </div>
+                    <div className="card status-card">
+                        <div className="status-card-icon primary">🏖️</div>
+                        <div className="status-card-content">
+                            <h3>OFF</h3>
+                            <p>{report.records.filter(r => r.is_off_day).length}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Report Table */}
             <div className="card">
                 <div className="card-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
@@ -232,7 +320,9 @@ export default function AdminReports() {
                             ? `Laporan ${new Date(date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
                             : reportType === 'monthly'
                                 ? `Laporan ${months[month - 1]} ${year}`
-                                : `Laporan Off: ${new Date(startDate).toLocaleDateString('id-ID')} - ${new Date(endDate).toLocaleDateString('id-ID')}`
+                                : reportType === 'history'
+                                    ? `Riwayat Absensi: ${new Date(startDate).toLocaleDateString('id-ID')} - ${new Date(endDate).toLocaleDateString('id-ID')}`
+                                    : `Laporan Off: ${new Date(startDate).toLocaleDateString('id-ID')} - ${new Date(endDate).toLocaleDateString('id-ID')}`
                         }
                     </h2>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -274,14 +364,6 @@ export default function AdminReports() {
                                     let aValue = a[sortConfig.key];
                                     let bValue = b[sortConfig.key];
 
-                                    // Handle specific columns for better sorting
-                                    if (sortConfig.key === 'attendance_rate') {
-                                        // Sort by number, remove % if needed (though data is number)
-                                        // attendance_rate is number in data
-                                    }
-
-                                    // Handle nested or computed values if needed (passed as plain keys currently)
-
                                     if (aValue < bValue) {
                                         return sortConfig.direction === 'ascending' ? -1 : 1;
                                     }
@@ -292,7 +374,6 @@ export default function AdminReports() {
                                 });
                             }
 
-                            // Render based on type
                             // Render based on type
                             if (reportType === 'daily') {
                                 return (
@@ -440,6 +521,80 @@ export default function AdminReports() {
                                                                 </div>
                                                                 <span>{record.attendance_rate}%</span>
                                                             </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            }
+
+                            if (reportType === 'history') {
+                                return (
+                                    <div className="table-container">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th onClick={() => requestSort('attendance_date')} style={{ cursor: 'pointer' }}>
+                                                        Tanggal {sortConfig.key === 'attendance_date' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('employee_id')} style={{ cursor: 'pointer' }}>
+                                                        ID Karyawan {sortConfig.key === 'employee_id' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th onClick={() => requestSort('name')} style={{ cursor: 'pointer' }}>
+                                                        Nama {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th>Check-in</th>
+                                                    <th>Check-out</th>
+                                                    <th onClick={() => requestSort('location_name')} style={{ cursor: 'pointer' }}>
+                                                        Lokasi {sortConfig.key === 'location_name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                                                    </th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {sortedRecords.map((record, index) => (
+                                                    <tr key={`${record.user_id}-${record.attendance_date}-${index}`}>
+                                                        <td>{formatDateShort(record.attendance_date)}</td>
+                                                        <td style={{ fontWeight: 500 }}>{record.employee_id}</td>
+                                                        <td>{record.name}</td>
+                                                        <td>
+                                                            {record.is_off_day ? (
+                                                                <span className="text-muted">OFF</span>
+                                                            ) : record.check_in_time ? (
+                                                                <div>
+                                                                    <span>{formatTime(record.check_in_time)}</span>
+                                                                    {!record.check_in_valid && (
+                                                                        <span className="badge badge-warning" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>
+                                                                            ⚠
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-muted">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td>
+                                                            {record.is_off_day ? (
+                                                                <span className="text-muted">OFF</span>
+                                                            ) : record.check_out_time ? (
+                                                                <span>{formatTime(record.check_out_time)}</span>
+                                                            ) : (
+                                                                <span className="text-muted">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td>{record.location_name || '-'}</td>
+                                                        <td>
+                                                            {record.is_off_day ? (
+                                                                <span className="badge badge-primary">🏖️ OFF</span>
+                                                            ) : record.check_in_time && record.check_out_time ? (
+                                                                <span className="badge badge-success">✅ Lengkap</span>
+                                                            ) : record.check_in_time ? (
+                                                                <span className="badge badge-warning">⏳ Belum Pulang</span>
+                                                            ) : (
+                                                                <span className="badge badge-danger">❌ Tidak Hadir</span>
+                                                            )}
                                                         </td>
                                                     </tr>
                                                 ))}

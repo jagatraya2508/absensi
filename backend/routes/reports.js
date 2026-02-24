@@ -834,4 +834,317 @@ router.get('/export/off/excel', authenticateToken, isAdmin, async (req, res) => 
     }
 });
 
+// ============================================
+// RIWAYAT ABSENSI (History) REPORT - Admin Only
+// ============================================
+
+// Get history report (Admin only) — detailed per-record data
+router.get('/history', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { start_date, end_date, user_id } = req.query;
+        const now = new Date();
+        const targetStart = start_date || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const targetEnd = end_date || now.toISOString().split('T')[0];
+
+        const params = [targetStart, targetEnd];
+        let userFilter = '';
+
+        if (user_id && user_id !== 'all') {
+            params.push(user_id);
+            userFilter = `AND u.id = $${params.length}`;
+        }
+
+        // Get attendance records grouped per user per day (check-in & check-out)
+        const result = await pool.query(
+            `SELECT 
+                u.id as user_id,
+                u.employee_id,
+                u.name,
+                DATE(ci.recorded_at) as attendance_date,
+                ci.recorded_at as check_in_time,
+                ci.is_valid as check_in_valid,
+                ci.distance_meters as check_in_distance,
+                co.recorded_at as check_out_time,
+                co.is_valid as check_out_valid,
+                al.name as location_name,
+                CASE WHEN uod.id IS NOT NULL THEN true ELSE false END as is_off_day
+            FROM users u
+            CROSS JOIN generate_series($1::date, $2::date, '1 day'::interval) AS d(date)
+            LEFT JOIN attendance_records ci ON u.id = ci.user_id 
+                AND ci.type = 'check_in' 
+                AND DATE(ci.recorded_at) = d.date::date
+            LEFT JOIN attendance_records co ON u.id = co.user_id 
+                AND co.type = 'check_out' 
+                AND DATE(co.recorded_at) = d.date::date
+            LEFT JOIN attendance_locations al ON COALESCE(ci.location_id, co.location_id) = al.id
+            LEFT JOIN user_off_days uod ON u.id = uod.user_id
+                AND uod.off_date = d.date::date
+            WHERE u.role = 'employee' ${userFilter}
+                AND (ci.id IS NOT NULL OR co.id IS NOT NULL OR uod.id IS NOT NULL)
+            ORDER BY d.date DESC, u.name ASC`,
+            params
+        );
+
+        const records = result.rows.map(r => ({
+            ...r,
+            attendance_date: r.attendance_date || r.check_in_time || r.check_out_time
+        }));
+
+        res.json({
+            start_date: targetStart,
+            end_date: targetEnd,
+            total: records.length,
+            records
+        });
+    } catch (error) {
+        console.error('Get history report error:', error);
+        res.status(500).json({ error: 'Terjadi kesalahan server' });
+    }
+});
+
+// Export History Report as PDF
+router.get('/export/history/pdf', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { start_date, end_date, user_id } = req.query;
+        const now = new Date();
+        const targetStart = start_date || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const targetEnd = end_date || now.toISOString().split('T')[0];
+
+        const params = [targetStart, targetEnd];
+        let userFilter = '';
+
+        if (user_id && user_id !== 'all') {
+            params.push(user_id);
+            userFilter = `AND u.id = $${params.length}`;
+        }
+
+        const result = await pool.query(
+            `SELECT 
+                u.employee_id,
+                u.name,
+                d.date::date as attendance_date,
+                ci.recorded_at as check_in_time,
+                ci.is_valid as check_in_valid,
+                co.recorded_at as check_out_time,
+                al.name as location_name,
+                CASE WHEN uod.id IS NOT NULL THEN true ELSE false END as is_off_day
+            FROM users u
+            CROSS JOIN generate_series($1::date, $2::date, '1 day'::interval) AS d(date)
+            LEFT JOIN attendance_records ci ON u.id = ci.user_id 
+                AND ci.type = 'check_in' 
+                AND DATE(ci.recorded_at) = d.date::date
+            LEFT JOIN attendance_records co ON u.id = co.user_id 
+                AND co.type = 'check_out' 
+                AND DATE(co.recorded_at) = d.date::date
+            LEFT JOIN attendance_locations al ON COALESCE(ci.location_id, co.location_id) = al.id
+            LEFT JOIN user_off_days uod ON u.id = uod.user_id
+                AND uod.off_date = d.date::date
+            WHERE u.role = 'employee' ${userFilter}
+                AND (ci.id IS NOT NULL OR co.id IS NOT NULL OR uod.id IS NOT NULL)
+            ORDER BY d.date DESC, u.name ASC`,
+            params
+        );
+
+        const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=riwayat-absensi-${targetStart}-to-${targetEnd}.pdf`);
+
+        doc.pipe(res);
+
+        // Title
+        doc.fontSize(18).text('LAPORAN RIWAYAT ABSENSI', { align: 'center' });
+        doc.fontSize(11).text(`Periode: ${formatDateID(targetStart)} - ${formatDateID(targetEnd)}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // Summary
+        const totalRecords = result.rows.length;
+        const totalPresent = result.rows.filter(r => r.check_in_time).length;
+        const totalOff = result.rows.filter(r => r.is_off_day).length;
+        doc.fontSize(10);
+        doc.text(`Total Record: ${totalRecords}  |  Hadir: ${totalPresent}  |  OFF: ${totalOff}`);
+        doc.moveDown(1);
+
+        // Table Header
+        const tableTop = doc.y;
+        const col1 = 40, col2 = 70, col3 = 170, col4 = 290, col5 = 420, col6 = 510, col7 = 610, col8 = 710;
+
+        doc.font('Helvetica-Bold').fontSize(9);
+        doc.text('No', col1, tableTop);
+        doc.text('ID', col2, tableTop);
+        doc.text('Nama', col3, tableTop);
+        doc.text('Tanggal', col4, tableTop);
+        doc.text('Check-in', col5, tableTop);
+        doc.text('Check-out', col6, tableTop);
+        doc.text('Lokasi', col7, tableTop);
+        doc.text('Status', col8, tableTop);
+
+        doc.moveTo(col1, tableTop + 15).lineTo(790, tableTop + 15).stroke();
+
+        // Table Rows
+        doc.font('Helvetica').fontSize(8);
+        let yPosition = tableTop + 25;
+
+        result.rows.forEach((row, index) => {
+            if (yPosition > 540) {
+                doc.addPage();
+                yPosition = 40;
+            }
+
+            let status = 'Tidak Hadir';
+            if (row.is_off_day) {
+                status = 'OFF';
+            } else if (row.check_in_time && row.check_out_time) {
+                status = row.check_in_valid ? 'Lengkap' : 'Diluar Radius';
+            } else if (row.check_in_time) {
+                status = 'Belum Pulang';
+            }
+
+            doc.text(String(index + 1), col1, yPosition);
+            doc.text(row.employee_id || '-', col2, yPosition);
+            doc.text(row.name || '-', col3, yPosition, { width: 115 });
+            doc.text(row.attendance_date ? formatDateID(row.attendance_date) : '-', col4, yPosition, { width: 125 });
+            doc.text(row.is_off_day ? 'OFF' : (row.check_in_time ? formatTimeID(row.check_in_time) : '-'), col5, yPosition);
+            doc.text(row.is_off_day ? 'OFF' : (row.check_out_time ? formatTimeID(row.check_out_time) : '-'), col6, yPosition);
+            doc.text(row.location_name || '-', col7, yPosition, { width: 95 });
+            doc.text(status, col8, yPosition);
+
+            yPosition += 18;
+        });
+
+        // Footer
+        const footerY = doc.page.height - 30;
+        doc.fontSize(7).text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 40, footerY);
+
+        doc.end();
+    } catch (error) {
+        console.error('Export History PDF error:', error);
+        res.status(500).json({ error: 'Gagal membuat PDF' });
+    }
+});
+
+// Export History Report as Excel
+router.get('/export/history/excel', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { start_date, end_date, user_id } = req.query;
+        const now = new Date();
+        const targetStart = start_date || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const targetEnd = end_date || now.toISOString().split('T')[0];
+
+        const params = [targetStart, targetEnd];
+        let userFilter = '';
+
+        if (user_id && user_id !== 'all') {
+            params.push(user_id);
+            userFilter = `AND u.id = $${params.length}`;
+        }
+
+        const result = await pool.query(
+            `SELECT 
+                u.employee_id,
+                u.name,
+                d.date::date as attendance_date,
+                ci.recorded_at as check_in_time,
+                ci.is_valid as check_in_valid,
+                ci.distance_meters as check_in_distance,
+                co.recorded_at as check_out_time,
+                al.name as location_name,
+                CASE WHEN uod.id IS NOT NULL THEN true ELSE false END as is_off_day
+            FROM users u
+            CROSS JOIN generate_series($1::date, $2::date, '1 day'::interval) AS d(date)
+            LEFT JOIN attendance_records ci ON u.id = ci.user_id 
+                AND ci.type = 'check_in' 
+                AND DATE(ci.recorded_at) = d.date::date
+            LEFT JOIN attendance_records co ON u.id = co.user_id 
+                AND co.type = 'check_out' 
+                AND DATE(co.recorded_at) = d.date::date
+            LEFT JOIN attendance_locations al ON COALESCE(ci.location_id, co.location_id) = al.id
+            LEFT JOIN user_off_days uod ON u.id = uod.user_id
+                AND uod.off_date = d.date::date
+            WHERE u.role = 'employee' ${userFilter}
+                AND (ci.id IS NOT NULL OR co.id IS NOT NULL OR uod.id IS NOT NULL)
+            ORDER BY d.date DESC, u.name ASC`,
+            params
+        );
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Riwayat Absensi');
+
+        // Title
+        worksheet.mergeCells('A1:H1');
+        worksheet.getCell('A1').value = 'LAPORAN RIWAYAT ABSENSI';
+        worksheet.getCell('A1').font = { bold: true, size: 16 };
+        worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+        worksheet.mergeCells('A2:H2');
+        worksheet.getCell('A2').value = `Periode: ${formatDateID(targetStart)} - ${formatDateID(targetEnd)}`;
+        worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+        // Header
+        worksheet.getRow(4).values = ['No', 'ID Karyawan', 'Nama', 'Tanggal', 'Check-in', 'Check-out', 'Lokasi', 'Status'];
+        worksheet.getRow(4).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        worksheet.getRow(4).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1E3A8A' }
+        };
+
+        // Data rows
+        result.rows.forEach((row, index) => {
+            let status = 'Tidak Hadir';
+            if (row.is_off_day) {
+                status = 'OFF';
+            } else if (row.check_in_time && row.check_out_time) {
+                status = row.check_in_valid ? 'Lengkap' : 'Diluar Radius';
+            } else if (row.check_in_time) {
+                status = 'Belum Pulang';
+            }
+
+            worksheet.addRow([
+                index + 1,
+                row.employee_id || '-',
+                row.name || '-',
+                row.attendance_date ? formatDateID(row.attendance_date) : '-',
+                row.is_off_day ? 'OFF' : (row.check_in_time ? formatTimeID(row.check_in_time) : '-'),
+                row.is_off_day ? 'OFF' : (row.check_out_time ? formatTimeID(row.check_out_time) : '-'),
+                row.location_name || '-',
+                status
+            ]);
+        });
+
+        // Column widths
+        worksheet.columns = [
+            { width: 5 },
+            { width: 15 },
+            { width: 25 },
+            { width: 30 },
+            { width: 12 },
+            { width: 12 },
+            { width: 20 },
+            { width: 15 }
+        ];
+
+        // Summary row
+        const summaryRow = worksheet.rowCount + 2;
+        const totalPresent = result.rows.filter(r => r.check_in_time).length;
+        const totalOff = result.rows.filter(r => r.is_off_day).length;
+        worksheet.getCell(`A${summaryRow}`).value = `Total Record: ${result.rows.length}  |  Hadir: ${totalPresent}  |  OFF: ${totalOff}`;
+        worksheet.getCell(`A${summaryRow}`).font = { bold: true };
+
+        // Footer
+        const footerRow = summaryRow + 1;
+        worksheet.getCell(`A${footerRow}`).value = `Dicetak pada: ${new Date().toLocaleString('id-ID')}`;
+        worksheet.getCell(`A${footerRow}`).font = { italic: true, size: 9 };
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=riwayat-absensi-${targetStart}-to-${targetEnd}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Export History Excel error:', error);
+        res.status(500).json({ error: 'Gagal membuat Excel' });
+    }
+});
+
 module.exports = router;

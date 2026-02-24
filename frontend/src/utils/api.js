@@ -257,7 +257,51 @@ export const reportsAPI = {
                 link.click();
             });
     },
+
+    // History report (Riwayat Absensi)
+    getHistory: (startDate, endDate, userId) => {
+        const params = new URLSearchParams();
+        if (startDate) params.set('start_date', startDate);
+        if (endDate) params.set('end_date', endDate);
+        if (userId && userId !== 'all') params.set('user_id', userId);
+        return request(`/reports/history?${params}`);
+    },
+
+    exportHistoryPDF: (startDate, endDate, userId) => {
+        const token = localStorage.getItem('token');
+        const params = new URLSearchParams();
+        if (startDate) params.set('start_date', startDate);
+        if (endDate) params.set('end_date', endDate);
+        if (userId && userId !== 'all') params.set('user_id', userId);
+        const url = `${API_BASE}/reports/export/history/pdf?${params}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `riwayat-absensi-${startDate}-to-${endDate}.pdf`;
+                link.click();
+            });
+    },
+
+    exportHistoryExcel: (startDate, endDate, userId) => {
+        const token = localStorage.getItem('token');
+        const params = new URLSearchParams();
+        if (startDate) params.set('start_date', startDate);
+        if (endDate) params.set('end_date', endDate);
+        if (userId && userId !== 'all') params.set('user_id', userId);
+        const url = `${API_BASE}/reports/export/history/excel?${params}`;
+        return fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `riwayat-absensi-${startDate}-to-${endDate}.xlsx`;
+                link.click();
+            });
+    },
 };
+
 
 // Leaves API
 export const leavesAPI = {

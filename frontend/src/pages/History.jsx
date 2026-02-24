@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { attendanceAPI, authAPI } from '../utils/api';
+import { attendanceAPI, authAPI, reportsAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import ImageModal from '../components/ImageModal';
 
@@ -13,6 +13,7 @@ export default function History() {
     const [endDate, setEndDate] = useState('');
     const [selectedUser, setSelectedUser] = useState('all');
     const [sortOrder, setSortOrder] = useState('desc');
+    const [exporting, setExporting] = useState(false);
 
     // Image Modal State
     const [selectedImg, setSelectedImg] = useState({ src: '', caption: '', isOpen: false });
@@ -159,6 +160,52 @@ export default function History() {
                     >
                         Reset
                     </button>
+                    {isAdmin && (
+                        <>
+                            <button
+                                type="button"
+                                className="btn btn-outline"
+                                disabled={exporting}
+                                onClick={async () => {
+                                    setExporting(true);
+                                    try {
+                                        const s = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+                                        const e = endDate || new Date().toISOString().split('T')[0];
+                                        await reportsAPI.exportHistoryPDF(s, e, selectedUser);
+                                    } catch (err) {
+                                        console.error('Export PDF failed:', err);
+                                        alert('Gagal mengunduh PDF');
+                                    } finally {
+                                        setExporting(false);
+                                    }
+                                }}
+                                style={{ padding: '0.5rem 1rem' }}
+                            >
+                                {exporting ? '⏳' : '📄'} PDF
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-success"
+                                disabled={exporting}
+                                onClick={async () => {
+                                    setExporting(true);
+                                    try {
+                                        const s = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+                                        const e = endDate || new Date().toISOString().split('T')[0];
+                                        await reportsAPI.exportHistoryExcel(s, e, selectedUser);
+                                    } catch (err) {
+                                        console.error('Export Excel failed:', err);
+                                        alert('Gagal mengunduh Excel');
+                                    } finally {
+                                        setExporting(false);
+                                    }
+                                }}
+                                style={{ padding: '0.5rem 1rem' }}
+                            >
+                                {exporting ? '⏳' : '📊'} Excel
+                            </button>
+                        </>
+                    )}
                 </form>
             </div>
 
